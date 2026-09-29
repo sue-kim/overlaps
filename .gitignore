@@ -2,6 +2,6 @@ node_modules/
 dist/
 *.local
 .env*
-.impeccable/review/
+.impeccable/
 
 *.tsbuildinfo
