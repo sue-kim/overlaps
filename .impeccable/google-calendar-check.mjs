@@ -1,0 +1,34 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH});
+try {
+ const page=await browser.newPage({viewport:{width:1366,height:900}});
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'Connect calendar',exact:true}).click();
+ await page.getByRole('button',{name:'Google Calendar',exact:true}).click();
+ const input=page.getByLabel('Google Calendar iCal link');
+ assert.equal(await input.getAttribute('type'),'password');
+ await page.screenshot({path:'.impeccable/review/google-calendar-desktop.png'});
+ await input.fill('https://calendar.google.com/calendar/u/0/r');
+ await page.getByRole('button',{name:'Import Google Calendar',exact:true}).click();
+ await page.getByRole('alert').filter({hasText:'Use an iCloud public calendar link or a Google Calendar iCal link.'}).waitFor();
+ await input.fill('https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics');
+ const responsePromise=page.waitForResponse(r=>r.url().endsWith('/api/calendar'));
+ await page.getByRole('button',{name:'Import Google Calendar',exact:true}).click();
+ const response=await responsePromise;
+ const data=await response.json();
+ assert.equal(response.status(),200,data.error);
+ assert.equal(data.provider,'google');
+ await page.getByText(/Google Calendar · Read-only/).waitFor();
+ const count=await page.locator('.connected-calendar').count();assert.equal(count,1);
+ await page.getByRole('button',{name:'Close dialog'}).click();
+ await page.reload();
+ await page.getByRole('button',{name:'My calendars (1)',exact:true}).click();
+ await page.getByText(/Google Calendar · Read-only/).waitFor();
+ await page.locator('.connected-calendar').getByRole('button',{name:/^Remove /}).click();
+ await page.getByRole('button',{name:'Google Calendar',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'.impeccable/review/google-calendar-mobile.png'});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ console.log('Google import passed with a live public holiday feed: input privacy, invalid URL rejection, successful import, Google labeling, persistence, removal, and mobile containment.');
+}finally{await browser.close();}
