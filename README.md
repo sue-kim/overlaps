@@ -24,8 +24,8 @@ Use `PORT=3000 npm run dev` to choose another port. The server binds to loopback
 
 1. Add cities with **Add city**. Seoul, San Francisco, and New York are preselected.
 2. Make a city **Home**, click its name, or choose the starting city in **Find a time** to change the calendar’s time zone. Events keep their actual instant.
-3. Click a calendar slot, or drag up or down within a day to select a range in half-hour steps. The calendar scrolls when you drag near its edges, and **Find a time** updates the start time and duration. You can also edit the date/time directly. Every city clock and comparison updates together.
-4. Click the **+** inside the selected calendar slot to save it. It changes to a checkmark after saving. You can also choose a duration and save from the side panel.
+3. Click a calendar slot to save it immediately using the chosen duration, or drag up or down within a day to preview a range in half-hour steps and save it when you release. The calendar scrolls when you drag near its edges, and **Find a time** updates the start time and duration. You can also enter the date/time directly and use **Save time** in the side panel. Arrow keys preview times; Enter or Space saves the focused time.
+4. Saved ranges that touch or overlap merge into one block, and saving clears the draft selection. Confirmed blocks cannot be selected again; hover or focus a block to reveal its **×** button and remove it. **Clear all** removes saved availability and the current selection, with **Undo** to restore them.
 5. **Copy times** prepares a formal message with all saved availability grouped by city and day. Adjoining or overlapping slots become one range, while separate ranges on the same day share a line. UTC offsets are omitted. With nothing saved, **Copy time** copies the selected time.
 6. Use the house icon on a city to make it the home city, which sets the calendar’s display zone and defines relative day/time differences.
 

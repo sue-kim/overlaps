@@ -1,0 +1,73 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Overlap//Sample Calendar//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:Overlap sample calendar
+X-WR-TIMEZONE:Asia/Seoul
+X-WR-CALDESC:Fictional events for testing time zones and calendar imports.
+BEGIN:VEVENT
+UID:overlap-sample-prep-20260928@overlap.example
+DTSTAMP:20260929T134957Z
+DTSTART:20260928T010000Z
+DTEND:20260928T013000Z
+SUMMARY:Sample - Interview preparation
+DESCRIPTION:Fictional daily preparation session. 10:00-10:30 AM in Seoul.
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+RRULE:FREQ=DAILY;COUNT=5
+END:VEVENT
+BEGIN:VEVENT
+UID:overlap-sample-sf-call-20260928@overlap.example
+DTSTAMP:20260929T134957Z
+DTSTART:20260929T230000Z
+DTEND:20260929T234500Z
+SUMMARY:Sample - SF recruiter call
+DESCRIPTION:Fictional recruiter call. Tuesday 4:00-4:45 PM in San Francisco
+ .
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:overlap-sample-practice-20260928@overlap.example
+DTSTAMP:20260929T134957Z
+DTSTART:20260930T011500Z
+DTEND:20260930T020000Z
+SUMMARY:Sample - Portfolio practice
+DESCRIPTION:Fictional practice session. Overlaps interview preparation by 1
+ 5 minutes.
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:overlap-sample-ny-interview-20260928@overlap.example
+DTSTAMP:20260929T134957Z
+DTSTART:20260930T143000Z
+DTEND:20260930T153000Z
+SUMMARY:Sample - New York interview
+DESCRIPTION:Fictional interview. Wednesday 10:30-11:30 AM in New York. Cros
+ ses midnight in Seoul.
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:overlap-sample-sf-review-20260928@overlap.example
+DTSTAMP:20260929T134957Z
+DTSTART:20261001T230000Z
+DTEND:20261002T000000Z
+SUMMARY:Sample - SF portfolio review
+DESCRIPTION:Fictional portfolio review. Thursday 4:00-5:00 PM in San Franci
+ sco.
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:overlap-sample-portfolio-day-20260928@overlap.example
+DTSTAMP:20260929T134957Z
+DTSTART;VALUE=DATE:20261002
+DTEND;VALUE=DATE:20261003
+SUMMARY:Sample - Portfolio update day
+DESCRIPTION:Fictional all-day event for testing the all-day row.
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR

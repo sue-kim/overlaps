@@ -63,18 +63,33 @@ export function wallTime(date:string,time:string,zone:string) {
   return dt;
 }
 export interface Slot { id:string; start:string; duration:number; title:string }
+export function mergeSlots(slots:Slot[]):Slot[] {
+  const sorted=slots.map(slot=>({...slot,start:DateTime.fromISO(slot.start).toUTC().toISO()!}))
+    .sort((a,b)=>DateTime.fromISO(a.start).toMillis()-DateTime.fromISO(b.start).toMillis());
+  const merged:Slot[]=[];
+  for(const slot of sorted) {
+    const previous=merged.at(-1);
+    const start=DateTime.fromISO(slot.start).toMillis();
+    const end=start+slot.duration*60_000;
+    const previousStart=previous?DateTime.fromISO(previous.start).toMillis():0;
+    if(previous&&start<=previousStart+previous.duration*60_000) {
+      previous.duration=(Math.max(end,previousStart+previous.duration*60_000)-previousStart)/60_000;
+    } else merged.push(slot);
+  }
+  return merged;
+}
+export function isSlotCovered(slots:Slot[],candidate:Pick<Slot,'start'|'duration'>):boolean {
+  const start=DateTime.fromISO(candidate.start).toMillis(),end=start+candidate.duration*60_000;
+  return slots.some(slot=>{
+    const savedStart=DateTime.fromISO(slot.start).toMillis();
+    return savedStart<=start&&savedStart+slot.duration*60_000>=end;
+  });
+}
 export function availabilityText(slots:Slot[], places:City[], h24=false) {
-  const ranges=slots.map(slot=>{
+  const merged=mergeSlots(slots).map(slot=>{
     const start=DateTime.fromISO(slot.start,{zone:'utc'});
     return {start,end:start.plus({minutes:slot.duration})};
-  }).sort((a,b)=>a.start.toMillis()-b.start.toMillis());
-  const merged:typeof ranges=[];
-  for(const range of ranges) {
-    const previous=merged.at(-1);
-    if(previous&&range.start<=previous.end) {
-      if(range.end>previous.end)previous.end=range.end;
-    } else merged.push({...range});
-  }
+  });
   const sections=places.map(city=>{
     const days=new Map<string,{date:DateTime;times:string[]}>();
     for(const range of merged) {

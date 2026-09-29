@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { DateTime } from 'luxon';
-import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp, Check, Plus } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp, Check, X } from 'lucide-react';
 import { timeLabel, wallTime, type City, type Slot } from './time';
 import type { CalendarEvent } from './calendar';
 import { layoutIntervals } from './layout';
@@ -11,28 +11,32 @@ interface DragSelection {
   pointerId:number; element:HTMLButtonElement; column:HTMLElement; day:DateTime;
   anchorMinute:number; initialY:number; clientY:number; moved:boolean; lastRange:string;
   columnTop:number; preservePosition:boolean;
+  range:{start:DateTime;minutes:number};
 }
 interface Props {
-  selectionActive:boolean; showQuickSave:boolean; saveDisabled:boolean; selectionSaved:boolean; onSave:()=>void;
+  selectionActive:boolean; onSaveRange:(dt:DateTime,minutes:number)=>void; onCancelSelection:()=>void;
   showWorkHours:boolean; hiddenWorkCities:string[]; onToggleWorkHours:()=>void; onToggleWorkCity:(id:string)=>void;
   base:City; cities:City[]; week:DateTime; selected:DateTime; duration:number; h24:boolean; now:DateTime;
   slots:Slot[]; events:CalendarEvent[]; onSelect:(dt:DateTime)=>void; onWeek:(week:DateTime)=>void;
   onSelectRange:(dt:DateTime,minutes:number)=>void;
-  onSlot:(slot:Slot)=>void; onEvent:(event:CalendarEvent)=>void;
+  onRemoveSlot:(slot:Slot)=>void; onEvent:(event:CalendarEvent)=>void;
 }
-export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled,selectionSaved,onSave,showWorkHours,hiddenWorkCities,onToggleWorkHours,onToggleWorkCity,base,cities,week,selected,duration,h24,now,slots,events,onSelect,onSelectRange,onWeek,onSlot,onEvent}:Props) {
+export default function CalendarGrid({selectionActive,onSaveRange,onCancelSelection,showWorkHours,hiddenWorkCities,onToggleWorkHours,onToggleWorkCity,base,cities,week,selected,duration,h24,now,slots,events,onSelect,onSelectRange,onWeek,onRemoveSlot,onEvent}:Props) {
   const scroll=useRef<HTMLDivElement>(null);
   const keyboardMove=useRef(false);
+  const initiallyPositioned=useRef(false);
   const drag=useRef<DragSelection|null>(null);
   const scrollFrame=useRef<number|null>(null);
   const suppressClick=useRef(false);
   const [dragging,setDragging]=useState(false);
+  const savedRanges=slots.map(slot=>{const start=DateTime.fromISO(slot.start).toMillis();return {start,end:start+slot.duration*60_000};});
+  const isConfirmed=(dt:DateTime)=>savedRanges.some(range=>range.start<=dt.toMillis()&&dt.toMillis()<range.end);
   useEffect(()=>()=>{if(scrollFrame.current!==null)cancelAnimationFrame(scrollFrame.current);},[]);
   useLayoutEffect(()=>{
     const active=drag.current,container=scroll.current;
     if(!active?.preservePosition||!container)return;
     active.preservePosition=false;
-    // Showing the preview caption must not move the calendar under the pointer.
+    // Showing the selection must not move the calendar under the pointer.
     container.scrollTop+=active.column.getBoundingClientRect().top-active.columnTop;
   });
 
@@ -52,7 +56,7 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
     if(!start||!end)return;
     const minutes=end.diff(start,'minutes').minutes;
     const key=`${start.toISO()}/${minutes}`;
-    if(minutes>0&&key!==active.lastRange){active.lastRange=key;onSelectRange(start,minutes);}
+    if(minutes>0&&key!==active.lastRange){active.lastRange=key;active.range={start,minutes};onSelectRange(start,minutes);}
   }
   function autoScroll() {
     const active=drag.current,container=scroll.current;
@@ -70,9 +74,9 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
   }
   function beginDrag(event:ReactPointerEvent<HTMLButtonElement>,day:DateTime,minute:number,dt:DateTime) {
     suppressClick.current=false;
-    if(event.pointerType==='touch'||event.button!==0||!event.isPrimary||drag.current)return;
+    if(event.pointerType==='touch'||event.button!==0||!event.isPrimary||drag.current||isConfirmed(dt))return;
     const element=event.currentTarget,column=element.parentElement!;
-    drag.current={pointerId:event.pointerId,element,column,day,anchorMinute:minute,initialY:event.clientY,clientY:event.clientY,moved:false,lastRange:'',columnTop:column.getBoundingClientRect().top,preservePosition:true};
+    drag.current={pointerId:event.pointerId,element,column,day,anchorMinute:minute,initialY:event.clientY,clientY:event.clientY,moved:false,lastRange:'',columnTop:column.getBoundingClientRect().top,preservePosition:true,range:{start:dt,minutes:duration}};
     element.setPointerCapture(event.pointerId);
     element.focus({preventScroll:true});
     onSelect(dt);
@@ -84,6 +88,8 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
     drag.current=null;suppressClick.current=true;setDragging(false);
     if(scrollFrame.current!==null){cancelAnimationFrame(scrollFrame.current);scrollFrame.current=null;}
     if(active.element.hasPointerCapture(active.pointerId))active.element.releasePointerCapture(active.pointerId);
+    if(event.type==='pointerup')onSaveRange(active.range.start,active.range.minutes);
+    else onCancelSelection();
   }
   const homeId=cities[0]?.id;
   const comparisonCities=cities.filter(city=>city.id!==homeId);
@@ -94,7 +100,8 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
   const local=selected.setZone(base.zone);
   const railDay=local>=week&&local<week.plus({weeks:1})?local.startOf('day'):week;
   const hasOffsetChange=railCities.some(c=>days.some(day=>day.set({hour:12}).setZone(c.zone).offset!==week.set({hour:12}).setZone(c.zone).offset));
-  const focusedTime=(local>=week&&local<week.plus({weeks:1})?local:week.set({hour:9})).set({minute:Math.floor(local.minute/30)*30,second:0,millisecond:0});
+  let focusedTime=(local>=week&&local<week.plus({weeks:1})?local:week.set({hour:9})).set({minute:Math.floor(local.minute/30)*30,second:0,millisecond:0});
+  for(let attempt=0;attempt<336&&isConfirmed(focusedTime);attempt++){focusedTime=focusedTime.plus({minutes:30});if(focusedTime>=week.plus({days:7}))focusedTime=week;}
   useEffect(()=>{
     if(!keyboardMove.current)return;
     keyboardMove.current=false;
@@ -102,7 +109,8 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
     cell?.focus({preventScroll:true});cell?.scrollIntoView({block:'nearest',inline:'nearest'});
   },[selected.toISO()]);
   useEffect(()=>{
-    const el=scroll.current;if(!el||!selectionActive||drag.current)return;
+    const el=scroll.current;if(!el||drag.current||(!selectionActive&&initiallyPositioned.current))return;
+    initiallyPositioned.current=true;
     const y=(local.hour+local.minute/60)*HOUR;
     if(y<el.scrollTop+20||y+Math.min(duration/60*HOUR,100)>el.scrollTop+el.clientHeight-75)el.scrollTop=Math.max(0,y-100);
   },[base.zone,selected.toISO(),duration,selectionActive]);
@@ -120,7 +128,7 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
   return <section className="calendar-panel" data-dragging={dragging} aria-label="Weekly calendar">
     <a className="skip-calendar" href="#time-planner">Skip calendar to time controls</a>
     <div className="calendar-toolbar">
-      <div className="calendar-title"><CalendarDays size={19}/><h2>{monthLabel}</h2><div className="week-nav"><button className="icon-button" aria-label="Previous week" onClick={()=>onWeek(week.minus({weeks:1}))}><ChevronLeft size={17}/></button><button className="icon-button" aria-label="Next week" onClick={()=>onWeek(week.plus({weeks:1}))}><ChevronRight size={17}/></button></div><button className="today-button" onClick={()=>{onWeek(now.setZone(base.zone).startOf('week'));onSelect(now);}}>Today</button></div>
+      <div className="calendar-title"><CalendarDays size={19}/><h2>{monthLabel}</h2><div className="week-nav"><button className="icon-button" aria-label="Previous week" onClick={()=>onWeek(week.minus({weeks:1}))}><ChevronLeft size={17}/></button><button className="icon-button" aria-label="Next week" onClick={()=>onWeek(week.plus({weeks:1}))}><ChevronRight size={17}/></button></div><button className="today-button" onClick={()=>onWeek(now.setZone(base.zone).startOf('week'))}>Today</button></div>
     </div>
     <div className="work-hours-controls" aria-label="Work hours highlighting">
       <button type="button" className="work-hours-toggle" role="switch" aria-label="Highlight work hours" aria-checked={showWorkHours} onClick={onToggleWorkHours}><span className="switch-track" aria-hidden="true"><i/></span>Work hours</button>
@@ -137,7 +145,23 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
         <div className="time-grid" style={{height:24*HOUR}}>
           <div className="time-rail">{Array.from({length:24},(_,hour)=><div className="hour-label-row" key={hour} style={{top:hour*HOUR}}>{railCities.map(c=>{const dt=railDay.set({hour}).setZone(c.zone);return <span key={c.id} className={`${c.id===base.id?'primary-zone':''} ${showWorkHours&&c.id!==homeId&&!hiddenWorkCities.includes(c.id)&&isWorkHour(dt,c.zone)?'work-hour-label':''}`} style={cityStyle(c.id)}>{h24?dt.toFormat('HH:mm'):dt.toFormat('h a').toLowerCase()}</span>;})}</div>)}</div>
           {days.map(day=><div className={`day-column ${day.weekday>5?'weekend':''}`} key={day.toISODate()}>
-            {Array.from({length:48},(_,half)=>{const hour=Math.floor(half/2),minute=half%2*30;const dt=wallTime(day.toISODate()!,`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`,base.zone);return <button key={half} className={`time-cell ${hour>=9&&hour<18&&day.weekday<6?'working':''} ${half%2===0?'on-hour':''}`} style={{top:half*HOUR/2,height:HOUR/2}} disabled={!dt} tabIndex={dt?.hasSame(focusedTime,'minute')?0:-1} data-slot={dt?.toFormat('yyyy-MM-dd HH:mm')} onKeyDown={e=>{if(!dt)return;const changes:Record<string,{days?:number;minutes?:number}>={ArrowRight:{days:1},ArrowLeft:{days:-1},ArrowDown:{minutes:30},ArrowUp:{minutes:-30}};if(changes[e.key]){e.preventDefault();keyboardMove.current=true;onSelect(dt.plus(changes[e.key]));}}} onPointerDown={e=>dt&&beginDrag(e,day,half*30,dt)} onPointerMove={e=>{if(drag.current?.pointerId===e.pointerId)updateDrag(e.clientY);}} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} onClick={e=>{if(suppressClick.current&&e.detail!==0){suppressClick.current=false;return;}if(dt)onSelect(dt);}} aria-label={`${day.toFormat('cccc, LLLL d')}, ${hour}:${String(minute).padStart(2,'0')} in ${base.name}. Use arrow keys to move.`} />;})}
+            {Array.from({length:48},(_,half)=>{
+              const hour=Math.floor(half/2),minute=half%2*30;
+              const dt=wallTime(day.toISODate()!,`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`,base.zone);
+              const confirmed=!!dt&&isConfirmed(dt);
+              return <button key={half} className={`time-cell ${hour>=9&&hour<18&&day.weekday<6?'working':''} ${half%2===0?'on-hour':''} ${confirmed?'confirmed':''}`} style={{top:half*HOUR/2,height:HOUR/2}}
+                disabled={!dt} aria-disabled={!dt||confirmed} tabIndex={!confirmed&&dt?.hasSame(focusedTime,'minute')?0:-1} data-slot={dt?.toFormat('yyyy-MM-dd HH:mm')}
+                onKeyDown={e=>{
+                  if(!dt)return;
+                  const changes:Record<string,{days?:number;minutes?:number}>={ArrowRight:{days:1},ArrowLeft:{days:-1},ArrowDown:{minutes:30},ArrowUp:{minutes:-30}};
+                  const change=changes[e.key];
+                  if(change){e.preventDefault();let next=dt.plus(change);for(let attempt=0;attempt<336&&isConfirmed(next);attempt++)next=next.plus(change);if(!isConfirmed(next)){keyboardMove.current=true;onSelect(next);}}
+                }}
+                onPointerDown={e=>dt&&beginDrag(e,day,half*30,dt)} onPointerMove={e=>{if(drag.current?.pointerId===e.pointerId)updateDrag(e.clientY);}}
+                onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag}
+                onClick={e=>{if(suppressClick.current&&e.detail!==0){suppressClick.current=false;return;}if(dt&&!confirmed)onSaveRange(dt,duration);}}
+                aria-label={`${day.toFormat('cccc, LLLL d')}, ${hour}:${String(minute).padStart(2,'0')} in ${base.name}. ${confirmed?'Already saved.':'Use arrow keys to move. Press Enter or Space to save.'}`} />;
+            })}
             {showWorkHours&&workCities.map((city,index)=>workHoursInDay(day,city.zone).map((period,i)=>{
               const position=block(period.start.toISO()!,period.end.toISO()!,day);
               if(position){const end=period.end.setZone(base.zone);position.height=(end>=day.plus({days:1})?1440:end.hour*60+end.minute)/60*HOUR-position.top;}
@@ -148,21 +172,26 @@ export default function CalendarGrid({selectionActive,showQuickSave,saveDisabled
               const positions=layoutIntervals(entries.map(item=>({id:item.id,start:item.style!.top,end:item.style!.top+item.style!.height})));
               return entries.map(({id,event,slot,style})=>{
                 const lane=positions.get(id)!;
-                return <button key={id} className={`calendar-event ${event?'imported-event':'saved-event'}`} style={{...style!,left:`calc(${lane.column/lane.columns*100}% + 3px)`,width:`calc(${100/lane.columns}% - 6px)`,right:'auto'}} onClick={()=>event?onEvent(event):onSlot(slot!)} title={event?`${event.title} · ${event.sourceName}`:slot!.title}><strong>{event?event.title:'Available'}</strong>{style!.height>35&&<span>{timeLabel(DateTime.fromISO(event?event.start:slot!.start).setZone(base.zone),h24)}</span>}</button>;
+                const position={...style!,left:`calc(${lane.column/lane.columns*100}% + 3px)`,width:`calc(${100/lane.columns}% - 6px)`,right:'auto'};
+                if(event)return <button key={id} className="calendar-event imported-event" style={position} onClick={()=>onEvent(event)} title={`${event.title} · ${event.sourceName}`}><strong>{event.title}</strong>{style!.height>35&&<span>{timeLabel(DateTime.fromISO(event.start).setZone(base.zone),h24)}</span>}</button>;
+                const saved=slot!,start=DateTime.fromISO(saved.start).setZone(base.zone),end=start.plus({minutes:saved.duration});
+                const label=`${start.toFormat('ccc, LLL d')} ${timeLabel(start,h24)}–${timeLabel(end,h24)} · ${base.name}`;
+                return <div key={id} className="calendar-event saved-event" style={position} role="group" tabIndex={-1} aria-label={`Saved availability: ${label}`} title={label}>
+                  <strong>Available</strong>{style!.height>35&&<span>{timeLabel(start,h24)}</span>}
+                  <button type="button" className="saved-time-remove" aria-label={`Remove saved time: ${label}`} title="Remove saved time" onClick={()=>onRemoveSlot(saved)}><X size={12}/></button>
+                </div>;
               });
             })()}
             {selectionActive&&inWeek&&(()=>{
               const style=block(selected.toISO()!,selected.plus({minutes:duration}).toISO()!,day);
               if(!style)return null;
-              return <div className="selection-event" data-saved={selectionSaved} style={style}><strong>{timeLabel(local,h24)}</strong>
-                {showQuickSave&&!dragging&&day.hasSame(local,'day')?<button type="button" className="calendar-quick-save" disabled={saveDisabled||selectionSaved} data-saved={selectionSaved} aria-label={selectionSaved?'Selected calendar time saved':'Save selected calendar time'} title={selectionSaved?'Saved':'Save time'} onClick={onSave}>{selectionSaved?<Check size={14}/>:<Plus size={14}/>}</button>:<span className="selection-dot"/>}
-              </div>;
+              return <div className="selection-event" style={style}><strong>{timeLabel(local,h24)}</strong><span className="selection-dot"/></div>;
             })()}
             {day.hasSame(now.setZone(base.zone),'day')&&<div className="now-line" style={{top:(now.setZone(base.zone).hour+now.minute/60)*HOUR}}><i/></div>}
           </div>)}
         </div>
       </div>
     </div>
-    <div className="calendar-legend"><div><span><i className="legend-work"/>{showWorkHours?'Colored bands: local work hours':`9–6 in ${base.name}`}</span><span><i className="legend-available"/>Your availability</span>{events.length>0&&<span><i className="legend-calendar"/>Calendar events</span>}</div><span className="calendar-hint"><CircleHelp size={13}/>Click or drag to select a time</span></div>
+    <div className="calendar-legend"><div><span><i className="legend-work"/>{showWorkHours?'Colored bands: local work hours':`9–6 in ${base.name}`}</span><span><i className="legend-available"/>Your availability</span>{events.length>0&&<span><i className="legend-calendar"/>Calendar events</span>}</div><span className="calendar-hint"><CircleHelp size={13}/>Click or drag to save a time</span></div>
   </section>;
 }
