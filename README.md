@@ -2,6 +2,8 @@
 
 A personal world clock and interview availability planner for coordinating across Korea, San Francisco, New York, and other cities.
 
+Live app: [overlaps-zeta.vercel.app](https://overlaps-zeta.vercel.app)
+
 ## Run locally
 
 Requires Node.js 22.12+.
@@ -18,7 +20,18 @@ npm run build
 npm start
 ```
 
-Use `PORT=3000 npm run dev` to choose another port. The server binds to loopback. A public deployment needs an explicit hosting/authentication decision; this app is currently intended for personal local use.
+Use `PORT=3000 npm run dev` to choose another port. The local server binds to loopback.
+
+## Publish on Vercel
+
+The Vite frontend is served from `dist`; `api/calendar.js` runs the shared read-only calendar endpoint as a Vercel Function. Node.js 22 is selected in `package.json`. No environment variables or database are required.
+
+```sh
+npx vercel@latest link --project overlaps
+npx vercel@latest --prod
+```
+
+The published app is public, with no sign-in. Each visitor's calendars, saved times, and settings stay in that visitor's browser storage; deployment does not transfer data from the local app. The local and published URLs have separate storage, so import calendars again on the published site. Calendar files are parsed entirely in the browser. Calendar feed links pass through the Vercel-hosted endpoint to fetch events, without app-side persistence or logging of their contents.
 
 ## Plan an interview
 
@@ -41,13 +54,13 @@ In Apple Calendar on a Mac, select a calendar and use **File → Export → Expo
 
 ### Read-only iCloud public links
 
-Open **Connect calendar → iCloud link** and paste a public `webcal://` link. The local server fetches it from an allowlisted iCloud host and sends the calendar to the browser. Public calendars are accessible to anyone with their link. Use a private file import when that is unsuitable. The app does not log in to Apple, request a password, or modify your Apple calendar. Refresh a connected source from the calendar dialog to fetch updates.
+Open **Connect calendar → iCloud link** and paste a public `webcal://` link. The app server fetches it from an allowlisted iCloud host and sends the calendar to the browser. Public calendars are accessible to anyone with their link. Use a private file import when that is unsuitable. The app does not log in to Apple, request a password, or modify your Apple calendar. Refresh a connected source from the calendar dialog to fetch updates.
 
 ### Google Calendar
 
 Open **Connect calendar → Google Calendar**. On a computer, go to Google Calendar **Settings → your calendar → Integrate calendar** and paste its **Secret address in iCal format**. A public iCal feed link also works. This imports a read-only snapshot; use Refresh beside the calendar to fetch changes. There is no Google OAuth login or calendar write-back.
 
-Secret links grant access to their calendars. They are hidden in the input, stored in this browser, and sent only to the local app server to fetch from Google. They are not written to server logs or files. Remove a connected calendar to delete its stored source and link; reset its secret address in Google Calendar if it was exposed.
+Secret links grant access to their calendars. They are hidden in the input, stored in this browser, and sent to the app server to fetch from Google. On Vercel, this server runs on Vercel's infrastructure. The app does not write links or calendar contents to server logs or files. Remove a connected calendar to delete its stored source and link; reset its secret address in Google Calendar if it was exposed.
 
 Alternatively, export from Google Calendar on a computer using **Settings → Import & export → Export**, unzip the download, and import an individual `.ics` file under **Import a file**. A Workspace administrator may restrict exports or secret links. See [Google’s read-only connection guide](https://support.google.com/calendar/answer/37648?hl=en) and [export guide](https://support.google.com/calendar/answer/37111?hl=en).
 
