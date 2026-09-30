@@ -44,6 +44,8 @@ The published app is public, with no sign-in. Each visitor's calendars, saved ti
 
 Daylight saving is calculated for the selected date. Missing spring-forward times are rejected, and repeated fall-back times expose an explicit offset choice. In **Work hours**, click a city’s eye control to show or hide its colored band. Home starts hidden. **Settings** at the right of this row lets you choose each city’s color, working days, and local start/end times; **Save changes** applies your edits and shows the edited cities, including Home. Earlier end times extend into the next day. Defaults are 09:00–18:00, Monday–Friday. Bands follow local dates and daylight saving, and your colors, hours, and visibility choices are saved in this browser. Each continuous band has one city label that stays visible as you scroll within it; controls remain above the calendar. The underlying muted cells indicate outside the configured working hours in the calendar’s viewing city; these highlights do not represent imported busy events.
 
+City colors use a compact row of four swatches: Green, Rose, Gold, and Graphite. Similar pale options were consolidated for clearer comparison; saved Coral, Olive, and Clay choices map to Rose, Green, and Graphite respectively. Working hours and visibility are retained.
+
 ## Calendars
 
 No calendar is connected by default, and no real events are fabricated.

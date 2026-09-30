@@ -45,7 +45,7 @@ test('no weekdays means no work hours; equal or incomplete times are rejected',(
   assert.equal(validWorkSchedule({...defaultWorkHours(),start:''}),false);
 });
 test('stored settings retain visibility and sanitize malformed schedules',()=>{
-  assert.deepEqual(normalizeWorkHours({seoul:{start:'10:00',end:'17:00',visible:false,color:'coral',days:[1,1,7,8,'2']},bad:{start:'25:00',end:'18:00',visible:true,days:[1]}}),{seoul:{start:'10:00',end:'17:00',visible:false,color:'coral',days:[1,7]}});
+  assert.deepEqual(normalizeWorkHours({seoul:{start:'10:00',end:'17:00',visible:false,color:'coral',days:[1,1,7,8,'2']},bad:{start:'25:00',end:'18:00',visible:true,days:[1]}}),{seoul:{start:'10:00',end:'17:00',visible:false,color:'rose',days:[1,7]}});
   assert.deepEqual(normalizeWorkHours(null),{});
 });
 test('work bands span adjacent days once without filling non-working days',()=>{

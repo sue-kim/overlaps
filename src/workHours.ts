@@ -2,15 +2,17 @@ import { DateTime } from 'luxon';
 
 export interface WorkSchedule { start:string; end:string; days:number[] }
 export const workColors=[
-  {id:'mint',name:'Mint',background:'#dcece5',ink:'#386752',band:'#78a38b'},
-  {id:'coral',name:'Coral',background:'#f5e1d6',ink:'#874b32',band:'#d48a69'},
-  {id:'amber',name:'Amber',background:'#f2e5c9',ink:'#7a5b27',band:'#d6b575'},
-  {id:'rose',name:'Rose',background:'#f3dde0',ink:'#874856',band:'#cc8390'},
-  {id:'olive',name:'Olive',background:'#e8ead7',ink:'#5f6836',band:'#a0a960'},
-  {id:'clay',name:'Clay',background:'#ede2d8',ink:'#76513a',band:'#b48d6b'}
+  {id:'mint',name:'Green',background:'#deefe3',ink:'#275d3d',band:'#31875b'},
+  {id:'rose',name:'Rose',background:'#f8e0e6',ink:'#8a354d',band:'#cc5273'},
+  {id:'amber',name:'Gold',background:'#f8edca',ink:'#73520d',band:'#d8a52a'},
+  {id:'charcoal',name:'Graphite',background:'#e9e6e2',ink:'#575047',band:'#797168'}
 ] as const;
 export type WorkColorId=typeof workColors[number]['id'];
-export const getWorkColor=(color:WorkColorId|undefined,index:number)=>workColors.find(item=>item.id===color)||workColors[Math.max(0,index)%workColors.length];
+const legacyWorkColors:Record<string,WorkColorId>={coral:'rose',olive:'mint',clay:'charcoal'};
+function colorById(color:unknown) {
+  return typeof color==='string'?workColors.find(item=>item.id===(legacyWorkColors[color]||color)):undefined;
+}
+export const getWorkColor=(color:WorkColorId|undefined,index:number)=>colorById(color)||workColors[Math.max(0,index)%workColors.length];
 export interface CityWorkHours extends WorkSchedule { visible:boolean; color?:WorkColorId }
 export type WorkHoursPreferences=Record<string,CityWorkHours>;
 export const defaultWorkHours=(visible=true):CityWorkHours=>({start:'09:00',end:'18:00',days:[1,2,3,4,5],visible});
@@ -25,7 +27,8 @@ export function normalizeWorkHours(value:unknown):WorkHoursPreferences {
     if(!entry||typeof entry!=='object')continue;
     const item=entry as Partial<CityWorkHours>;
     if(!validTime(item.start)||!validTime(item.end)||item.start===item.end||!Array.isArray(item.days)||typeof item.visible!=='boolean')continue;
-    result[id]={start:item.start,end:item.end,days:[...new Set(item.days.filter(day=>Number.isInteger(day)&&day>=1&&day<=7))].sort(),visible:item.visible,...(workColors.some(color=>color.id===item.color)?{color:item.color}:{})};
+    const color=colorById(item.color);
+    result[id]={start:item.start,end:item.end,days:[...new Set(item.days.filter(day=>Number.isInteger(day)&&day>=1&&day<=7))].sort(),visible:item.visible,...(color?{color:color.id}:{})};
   }
   return result;
 }

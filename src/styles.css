@@ -38,13 +38,14 @@
 .work-settings-days button{min-height:34px;padding:4px 0;border-radius:5px;border:1px solid #dce7eb;font-size:10px;background:#fff;color:#506b74}
 .work-settings-days button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:white}
 .work-settings-days button:hover{border-color:var(--accent)}
-.work-settings-colors{border:0;padding:0;min-width:0;margin:18px 0}
-.work-settings-colors legend{padding:0;margin-bottom:7px;font-size:11px;color:#506b74}
-.work-settings-colors>div{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
-.work-settings-colors button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:6px 2px;border:1px solid transparent;border-radius:6px;font-size:10px;color:var(--swatch-ink)}
-.work-settings-colors button>span{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid var(--swatch-color);border-radius:50%;background:var(--swatch-bg)}
-.work-settings-colors button[aria-pressed=true]{border-color:var(--swatch-ink);background:var(--swatch-bg)}
-.work-settings-colors button:hover{background:var(--swatch-bg)}
+.work-settings-colors{display:flex;align-items:center;gap:12px;min-width:0;margin:12px 0}
+.work-settings-colors>span{font-size:11px;color:#506b74}
+.work-settings-colors>div{display:flex;gap:6px}
+.work-settings-colors button{display:flex;align-items:center;justify-content:center;width:32px;height:32px;padding:3px;border:2px solid transparent;border-radius:50%;color:var(--swatch-check)}
+.work-settings-colors button>span{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--swatch-color)}
+.work-settings-colors button[aria-pressed=true]{border-color:var(--swatch-color)}
+.work-settings-colors button:hover{border-color:var(--swatch-color)}
+@media(pointer:coarse){.work-settings-colors button{width:44px;height:44px}}
 .work-settings-times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .work-settings-note{margin-top:8px;font-size:11px;color:#506b74}
 .work-settings-error{margin-top:8px;font-size:11px;color:#a2462e;line-height:1.5}
