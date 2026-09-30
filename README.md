@@ -35,7 +35,7 @@ The published app is public, with no sign-in. Each visitor's calendars, saved ti
 
 ## Plan an interview
 
-1. Add cities with **Add city**. Seoul, San Francisco, and New York are preselected.
+1. On your first visit, your browser's time zone sets a single **Home** clock and the calendar's display zone. Choose **Add city** to compare more cities. The city name represents your time zone, not a precise location lookup. Existing saved cities and your chosen Home are retained on later visits.
 2. Make a city **Home** or click its name to change the calendar’s time zone. Events keep their actual instant.
 3. Click a calendar slot to save 30 minutes immediately, or drag up or down within a day to preview a range in half-hour steps and save it when you release. The calendar scrolls when you drag near its edges, and **Find a time** shows the selected range. Every new click saves 30 minutes, even after viewing or dragging a longer range. Arrow keys preview times; Enter or Space saves 30 minutes at the focused time.
 4. Saved ranges that touch or overlap merge into one block. Newly saved times stay selected with their details in **Find a time**; click an existing block to view its details without saving a duplicate. **Saved times** in the right panel lists every range included in **Copy times**, shown in the chosen city's time zone, with a remove button for each range. The calendar **×** appears on hover or keyboard focus. **Clear all** removes saved availability and the current selection, with **Undo** to restore them.

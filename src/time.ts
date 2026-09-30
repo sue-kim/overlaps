@@ -47,7 +47,27 @@ for (const zone of Intl.supportedValuesOf('timeZone')) {
   const name=zone.split('/').at(-1)!.replaceAll('_',' ');
   cities.push({id:zone,name,country:zone.split('/')[0].replaceAll('_',' '),zone,code:name.slice(0,3).toUpperCase()});
 }
-export const defaultCities = ['seoul','san-francisco','new-york'];
+function canonicalZone(zone:string) {
+  try{return new Intl.DateTimeFormat('en',{timeZone:zone}).resolvedOptions().timeZone;}catch{return null;}
+}
+function cityForZone(zone:string):City {
+  const canonical=canonicalZone(zone)||'UTC';
+  const name=canonical.split('/').at(-1)!.replaceAll('_',' ');
+  const matches=cities.filter(city=>city.zone===zone||city.zone===canonical);
+  // A time zone identifies its representative city, not the user's exact location.
+  const existing=matches.find(city=>city.name===name)||matches[0];
+  if(existing)return existing;
+  const city={id:canonical,name,country:canonical==='UTC'?'Coordinated Universal Time':canonical.split('/')[0].replaceAll('_',' '),zone:canonical,code:name.slice(0,3).toUpperCase()};
+  cities.push(city);
+  return city;
+}
+export function initialCityIds(saved:unknown,zone=Intl.DateTimeFormat().resolvedOptions().timeZone):string[] {
+  if(Array.isArray(saved)&&saved.length) {
+    const restored=saved.map(id=>typeof id==='string'?(cities.find(city=>city.id===id)||(canonicalZone(id)?cityForZone(id):undefined)):undefined);
+    if(restored.every(city=>city!==undefined))return [...new Set(restored.map(city=>city.id))];
+  }
+  return [cityForZone(zone).id];
+}
 export const timeLabel = (dt:DateTime, h24=false) => dt.toFormat(h24 ? 'HH:mm' : 'h:mm a');
 export const utcLabel = (dt:DateTime) => `UTC${dt.toFormat('Z')}`;
 export function relativeOffset(dt:DateTime, home:DateTime) {

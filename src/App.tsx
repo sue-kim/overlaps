@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
 import { ArrowDownToLine, ArrowRight, CalendarDays, Check, Clock3, Copy, House, Link, LoaderCircle, Moon, Plus, RefreshCw, Search, ShieldCheck, Sun, Trash2, Upload, X } from 'lucide-react';
-import { cities, defaultCities, timeLabel, utcLabel, relativeOffset, dayDifference, availabilityText, slotsToICS, mergeSlots, isSlotCovered, type Slot } from './time';
+import { cities, initialCityIds, timeLabel, utcLabel, relativeOffset, dayDifference, availabilityText, slotsToICS, mergeSlots, isSlotCovered, type Slot } from './time';
 import { calendarName, expandCalendar, validateICS, type CalendarSource, type CalendarEvent } from './calendar';
 import CalendarGrid from './CalendarGrid';
 import { defaultWorkHours, getWorkColor, normalizeWorkHours, type WorkHoursPreferences } from './workHours';
@@ -13,10 +13,10 @@ function Modal({title,onClose,children,className=''}:{title:string;onClose:()=>v
   return <dialog ref={ref} className={`modal ${className}`} onCancel={onClose} onClick={e=>{if(e.target===ref.current)onClose();}} aria-label={title}><div className="modal-heading"><h2>{title}</h2><button className="icon-button" onClick={onClose} aria-label="Close dialog"><X size={20}/></button></div>{children}</dialog>;
 }
 export default function App() {
-  const [cityIds,setCityIds]=useState<string[]>(()=>{const saved=initial('overlap-cities',defaultCities);return Array.isArray(saved)&&saved.length&&saved.every(id=>cities.some(c=>c.id===id))?saved:defaultCities;});
+  const [cityIds,setCityIds]=useState<string[]>(()=>initialCityIds(initial('overlap-cities',null)));
   const places=cityIds.map(id=>cities.find(c=>c.id===id)!);
   const home=places[0];
-  const [baseId,setBaseId]=useState(()=>initial('overlap-base','seoul'));
+  const [baseId,setBaseId]=useState(()=>initial('overlap-base',home.id));
   const base=places.find(c=>c.id===baseId)||home;
   const [copyCityId,setCopyCityId]=useState<string>(()=>{const saved=initial('overlap-copy-city',base.id);return places.some(city=>city.id===saved)?saved:base.id;});
   const copyCity=places.find(city=>city.id===copyCityId)||home;
@@ -98,7 +98,7 @@ export default function App() {
   return <div className="app-shell" onPointerDown={e=>{if(e.target instanceof Element&&!e.target.closest('.time-cell,.calendar-event,.selection-event,.day-heading,.all-day-row,.skip-calendar,#time-planner,dialog'))clearSelection();}}>
     <header className="app-header"><a href="/" className="brand" aria-label="Overlap home"><span className="brand-mark"><i/><i/></span>overlap<span className="brand-period">.</span></a><div className="header-separator"/><span className="brand-tagline">A little closer, across time.</span><div className="header-right"><span className="local-date">{now.setZone(home.zone).toFormat('cccc, LLLL d')}</span><button className="format-toggle" onClick={()=>setH24(!h24)} aria-label={`Switch to ${h24?'12':'24'}-hour time`}><span className={!h24?'active':''}>12h</span><span className={h24?'active':''}>24h</span></button><button className="button calendar-connect" onClick={openCalendars}><CalendarDays size={16}/>{sources.length?`My calendars (${sources.length})`:'Connect calendar'}<Plus size={15}/></button></div></header>
     <main>
-      <section className="clocks-section" aria-label="World clocks"><div className="clocks-row">{places.map(city=>{const dt=clockTime.setZone(city.zone),night=dt.hour<7||dt.hour>=19,day=dayDifference(dt,homeTime);return <article className={`city-card ${city.id===base.id?'city-active':''}`} key={city.id}>
+      <section className="clocks-section" aria-label="World clocks"><div className="clocks-row" data-single-city={places.length===1}>{places.map(city=>{const dt=clockTime.setZone(city.zone),night=dt.hour<7||dt.hour>=19,day=dayDifference(dt,homeTime);return <article className={`city-card ${city.id===base.id?'city-active':''}`} key={city.id}>
         <div className="city-card-top"><button className="city-name-button" onClick={()=>changeBase(city.id)} title={`Show calendar in ${city.name} time`}><span>{city.name}</span>{city.id===home.id&&<span className="home-badge"><House size={10}/>Home</span>}</button><div className="city-actions">{city.id!==home.id&&<button className="icon-button" aria-label={`Make ${city.name} home`} onClick={()=>{setCityIds([city.id,...cityIds.filter(id=>id!==city.id)]);changeBase(city.id);}}><House size={13}/></button>}{cityIds.length>1&&<button className="icon-button" aria-label={`Remove ${city.name}`} onClick={()=>removeCity(city.id)}><X size={14}/></button>}</div></div>
         <div className="city-time-row"><div><div className="city-time">{dt.toFormat(h24?'HH:mm':'h:mm')}{!h24&&<span>{dt.toFormat('a')}</span>}</div><div className="city-date">{dt.toFormat('ccc, LLL d')}{day!==0&&<span className="day-change">{day>0?'+':''}{day} day</span>}</div></div><AnalogClock time={dt} night={night}/></div>
         <div className="city-card-footer"><span>{night?<Moon size={12}/>:<Sun size={13}/>} {dt.offsetNameShort} <span className="utc-offset">{utcLabel(dt)}</span></span><span>{city.id===home.id?'Your local time':relativeOffset(dt,homeTime)}</span></div>
