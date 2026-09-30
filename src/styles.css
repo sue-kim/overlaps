@@ -80,3 +80,19 @@
 .panel-actions>.copy-button:only-child{grid-column:1/-1}
 
 @media(min-width:761px){.clocks-row[data-single-city=true] .city-card{flex:0 0 320px}}
+
+/* Give the planner the full workspace height beside clocks and calendar. */
+@media(min-width:761px){
+  .planner-layout{grid-template-areas:"clocks planner" "calendar planner";grid-template-rows:auto minmax(0,1fr);row-gap:inherit}
+  .clocks-section{grid-area:clocks;min-width:0}
+  .calendar-panel{grid-area:calendar;min-height:0}
+  .time-panel{grid-area:planner;max-height:none}
+  .saved-availability{flex:1 1 auto}
+  .availability-list{max-height:none}
+}
+@media(min-width:761px) and (max-width:1000px){
+  .app-shell{height:100dvh;min-height:700px}
+  .planner-layout{min-height:350px}
+  .calendar-panel{height:auto}
+}
+@media(max-width:760px){.clocks-section{order:-2;min-width:0}}
