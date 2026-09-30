@@ -1,7 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { Settings2, X } from 'lucide-react';
+import { Check, Settings2, X } from 'lucide-react';
 import type { City } from './time';
-import { validWorkSchedule, type WorkHoursPreferences } from './workHours';
+import { getWorkColor, workColors, validWorkSchedule, type WorkHoursPreferences } from './workHours';
 
 const weekdays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 interface Props {
@@ -20,7 +20,11 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
   const [position,setPosition]=useState({top:16,left:16});
   const city=cities.find(item=>item.id===cityId)||cities[0];
   const schedule=draft[city.id]||preferences[city.id];
+  const selectedColor=getWorkColor(schedule.color,cities.findIndex(item=>item.id===city.id));
   const invalidCities=cities.filter(item=>!validWorkSchedule(draft[item.id]||preferences[item.id]));
+  function updateSchedule(changes:Partial<typeof schedule>) {
+    setDraft(old=>({...old,[city.id]:{...schedule,...changes,visible:true}}));
+  }
   useLayoutEffect(()=>{
     if(!open)return;
     const place=()=>{
@@ -46,17 +50,18 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
       const visible=event.newState==='open';setOpen(visible);
       if(visible)popover.current?.querySelector('select')?.focus({preventScroll:true});
     }}>
-      <form onSubmit={event=>{event.preventDefault();if(invalidCities.length)return;onSave(draft);close();}}>
+      <form onSubmit={event=>{event.preventDefault();if(invalidCities.length)return;onSave({...draft,[city.id]:{...schedule,visible:true}});close();}}>
         <div className="work-settings-heading"><h3 id={`${id}-title`}>Work hours</h3><button type="button" className="icon-button" onClick={close} aria-label="Close work hours settings"><X size={17}/></button></div>
-        <p className="work-settings-description">Set working days and hours in each city’s local time.</p>
+        <p className="work-settings-description">Set local working days and hours. Saving shows them on the calendar.</p>
         <label className="work-settings-city">City<select aria-label="City" value={city.id} onChange={event=>setCityId(event.target.value)}>{cities.map((item,index)=><option key={item.id} value={item.id}>{item.name}{index===0?' (Home)':''}</option>)}</select></label>
+        <fieldset className="work-settings-colors"><legend>Color</legend><div>{workColors.map(color=><button key={color.id} type="button" aria-label={color.name} aria-pressed={selectedColor.id===color.id} style={{'--swatch-bg':color.background,'--swatch-ink':color.ink,'--swatch-color':color.band} as React.CSSProperties} onClick={()=>updateSchedule({color:color.id})}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={15}/>}</span>{color.name}</button>)}</div></fieldset>
         <fieldset className="work-settings-days"><legend>Working days</legend><div>{weekdays.map((day,index)=>{
           const selected=schedule.days.includes(index+1);
-          return <button key={day} type="button" aria-label={day} aria-pressed={selected} onClick={()=>setDraft(old=>({...old,[city.id]:{...schedule,days:selected?schedule.days.filter(value=>value!==index+1):[...schedule.days,index+1].sort()}}))}>{day.slice(0,3)}</button>;
+          return <button key={day} type="button" aria-label={day} aria-pressed={selected} onClick={()=>updateSchedule({days:selected?schedule.days.filter(value=>value!==index+1):[...schedule.days,index+1].sort()})}>{day.slice(0,3)}</button>;
         })}</div></fieldset>
         <div className="work-settings-times">
-          <label>Start<input type="time" required step="900" value={schedule.start} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>setDraft(old=>({...old,[city.id]:{...schedule,start:event.target.value}}))}/></label>
-          <label>End<input type="time" required step="900" value={schedule.end} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>setDraft(old=>({...old,[city.id]:{...schedule,end:event.target.value}}))}/></label>
+          <label>Start<input type="time" required step="900" value={schedule.start} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>updateSchedule({start:event.target.value})}/></label>
+          <label>End<input type="time" required step="900" value={schedule.end} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>updateSchedule({end:event.target.value})}/></label>
         </div>
         {!schedule.days.length?<p className="work-settings-note">No working days selected for {city.name}.</p>:schedule.end<schedule.start&&<p className="work-settings-note">Ends the following day.</p>}
         {invalidCities.length>0&&<p className="work-settings-error" role="alert">Choose different start and end times for {invalidCities.map(item=>item.name).join(', ')}.</p>}

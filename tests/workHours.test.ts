@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DateTime } from 'luxon';
-import { defaultWorkHours, isWorkHour, normalizeWorkHours, validWorkSchedule, workHoursInDay } from '../src/workHours';
+import { defaultWorkHours, isWorkHour, normalizeWorkHours, validWorkSchedule, workHoursInDay, workBandsInWeek } from '../src/workHours';
 
 const seoul=(date:string)=>DateTime.fromISO(date,{zone:'Asia/Seoul'});
 test('custom city hours and weekdays convert into the displayed date',()=>{
@@ -45,6 +45,20 @@ test('no weekdays means no work hours; equal or incomplete times are rejected',(
   assert.equal(validWorkSchedule({...defaultWorkHours(),start:''}),false);
 });
 test('stored settings retain visibility and sanitize malformed schedules',()=>{
-  assert.deepEqual(normalizeWorkHours({seoul:{start:'10:00',end:'17:00',visible:false,days:[1,1,7,8,'2']},bad:{start:'25:00',end:'18:00',visible:true,days:[1]}}),{seoul:{start:'10:00',end:'17:00',visible:false,days:[1,7]}});
+  assert.deepEqual(normalizeWorkHours({seoul:{start:'10:00',end:'17:00',visible:false,color:'coral',days:[1,1,7,8,'2']},bad:{start:'25:00',end:'18:00',visible:true,days:[1]}}),{seoul:{start:'10:00',end:'17:00',visible:false,color:'coral',days:[1,7]}});
   assert.deepEqual(normalizeWorkHours(null),{});
+});
+test('work bands span adjacent days once without filling non-working days',()=>{
+  const week=seoul('2026-09-28');
+  assert.deepEqual(workBandsInWeek(week,'Asia/Seoul'),[{firstDay:0,lastDay:4,startMinute:540,endMinute:1080}]);
+  assert.deepEqual(workBandsInWeek(week,'Asia/Seoul',{start:'09:00',end:'18:00',days:[1,3]}),[
+    {firstDay:0,lastDay:0,startMinute:540,endMinute:1080},
+    {firstDay:2,lastDay:2,startMinute:540,endMinute:1080}
+  ]);
+});
+test('shared labels retain the two separate date segments for overseas work hours',()=>{
+  assert.deepEqual(workBandsInWeek(seoul('2026-09-28'),'America/New_York'),[
+    {firstDay:0,lastDay:4,startMinute:1320,endMinute:1440},
+    {firstDay:1,lastDay:5,startMinute:0,endMinute:420}
+  ]);
 });

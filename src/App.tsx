@@ -4,7 +4,7 @@ import { ArrowDownToLine, ArrowRight, CalendarDays, Check, Clock3, Copy, House, 
 import { cities, defaultCities, timeLabel, utcLabel, relativeOffset, dayDifference, availabilityText, slotsToICS, mergeSlots, isSlotCovered, type Slot } from './time';
 import { calendarName, expandCalendar, validateICS, type CalendarSource, type CalendarEvent } from './calendar';
 import CalendarGrid from './CalendarGrid';
-import { defaultWorkHours, normalizeWorkHours, type WorkHoursPreferences } from './workHours';
+import { defaultWorkHours, getWorkColor, normalizeWorkHours, type WorkHoursPreferences } from './workHours';
 function initial<T>(key:string,fallback:T):T {try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback;}catch{return fallback;}}
 function AnalogClock({time,night}:{time:DateTime;night:boolean}) {return <div className={`analog-clock ${night?'night':''}`} aria-hidden="true"><i className="clock-tick top"/><i className="clock-tick right"/><i className="clock-tick bottom"/><i className="clock-tick left"/><i className="clock-hand hour" style={{transform:`rotate(${(time.hour%12)*30+time.minute/2}deg)`}}/><i className="clock-hand minute" style={{transform:`rotate(${time.minute*6}deg)`}}/><i className="clock-center"/></div>;}
 function Modal({title,onClose,children,className=''}:{title:string;onClose:()=>void;children:React.ReactNode;className?:string}) {
@@ -30,10 +30,16 @@ export default function App() {
   const [h24,setH24]=useState<boolean>(()=>initial<boolean>('overlap-24h',false)===true);
   const [workPreferences,setWorkPreferences]=useState<WorkHoursPreferences>(()=>{
     const saved=initial<unknown>('overlap-work-preferences',null);
-    if(saved!==null)return normalizeWorkHours(saved);
+    if(saved!==null){
+      const restored=normalizeWorkHours(saved);
+      return {...restored,...Object.fromEntries(places.map((city,index)=>{
+        const preference=restored[city.id]||defaultWorkHours(index!==0);
+        return [city.id,{...preference,color:getWorkColor(preference.color,index).id}];
+      }))};
+    }
     const enabled=initial<boolean>('overlap-work-hours',true)!==false;
     const hidden=initial<unknown>('overlap-hidden-work-cities',[]);
-    return Object.fromEntries(places.map((city,index)=>[city.id,defaultWorkHours(enabled&&index!==0&&!(Array.isArray(hidden)&&hidden.includes(city.id)))]));
+    return Object.fromEntries(places.map((city,index)=>[city.id,{...defaultWorkHours(enabled&&index!==0&&!(Array.isArray(hidden)&&hidden.includes(city.id))),color:getWorkColor(undefined,index).id}]));
   });
   const workHours=Object.fromEntries(places.map((city,index)=>[city.id,workPreferences[city.id]||defaultWorkHours(index!==0)]));
   const [storedSlots,setSlots]=useState<Slot[]>(()=>{const value=initial<Slot[]>('overlap-slots',[]);return Array.isArray(value)?value.filter(s=>DateTime.fromISO(s.start).isValid&&s.duration>0&&typeof s.id==='string'):[];});
@@ -77,7 +83,7 @@ export default function App() {
   const currentSlot:Slot={id:crypto.randomUUID(),start:selected.toUTC().toISO()!,duration,title:'Interview availability'};
   const savedSelection=slots.find(slot=>isSlotCovered([slot],currentSlot));
   const selectionSaved=!!savedSelection;
-  function saveRange(dt:DateTime,minutes:number){minutes=Math.max(30,minutes);const slot:Slot={id:crypto.randomUUID(),start:dt.toUTC().toISO()!,duration:minutes,title:'Interview availability'};const merged=mergeSlots([...slots,slot]);const saved=merged.find(item=>isSlotCovered([item],slot))!;setSlots(old=>mergeSlots([...old,slot]));viewSlot(saved);setToast('Availability saved. Adjoining times are combined.');}
+  function saveRange(dt:DateTime,minutes:number){minutes=Math.max(30,minutes);const slot:Slot={id:crypto.randomUUID(),start:dt.toUTC().toISO()!,duration:minutes,title:'Interview availability'};const merged=mergeSlots([...slots,slot]);const saved=merged.find(item=>isSlotCovered([item],slot))!;const combined=merged.length<=slots.length&&!isSlotCovered(slots,slot);setSlots(old=>mergeSlots([...old,slot]));viewSlot(saved);setToast(combined?'Availability saved. Adjoining times are combined.':'Availability saved.');}
   function removeSlot(id:string){setSlots(old=>mergeSlots(old).filter(slot=>slot.id!==id));if(hasSelection&&savedSelection?.id===id)clearSelection();setToast('Saved time removed.');}
   function clearTimes(){setClearedTimes({slots,selection:hasSelection?currentSlot:null});setSlots([]);clearSelection();setToast('All times cleared.');}
   function undoClearTimes(){if(!clearedTimes)return;setSlots(old=>mergeSlots([...old,...clearedTimes.slots]));if(clearedTimes.selection)showTime(DateTime.fromISO(clearedTimes.selection.start),clearedTimes.selection.duration);setClearedTimes(null);setToast('Times restored.');}
@@ -126,7 +132,7 @@ export default function App() {
       <footer><span><ShieldCheck size={13}/>Your plans stay in this browser.</span></footer>
     </main>
     {toast&&<div className="toast" role="status"><Check size={17}/><span>{toast}</span>{toast==='All times cleared.'&&clearedTimes&&<button className="toast-undo" onClick={undoClearTimes}>Undo</button>}</div>}
-    {modal==='city'&&<Modal title="Add a city" onClose={()=>setModal(null)}><p className="modal-description">Bring another corner of the world into view.</p><label className="search-input"><Search size={18}/><input autoFocus placeholder="Search cities or time zones" value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="city-search-results">{matches.length?matches.map(city=><button key={city.id} onClick={()=>{setCityIds([...cityIds,city.id]);setModal(null);setToast(`${city.name} added to your world.`);}}><span className="search-city-code">{city.code}</span><span><strong>{city.name}</strong><small>{city.country}</small></span><span className="search-city-time">{timeLabel(clockTime.setZone(city.zone),h24)}<Plus size={16}/></span></button>):<p className="empty-search">No matching cities. Try a nearby city or a time zone like “Pacific”.</p>}</div></Modal>}
+    {modal==='city'&&<Modal title="Add a city" onClose={()=>setModal(null)}><p className="modal-description">Bring another corner of the world into view.</p><label className="search-input"><Search size={18}/><input autoFocus placeholder="Search cities or time zones" value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="city-search-results">{matches.length?matches.map(city=><button key={city.id} onClick={()=>{setCityIds([...cityIds,city.id]);setWorkPreferences(old=>old[city.id]?old:{...old,[city.id]:{...defaultWorkHours(),color:getWorkColor(undefined,cityIds.length).id}});setModal(null);setToast(`${city.name} added to your world.`);}}><span className="search-city-code">{city.code}</span><span><strong>{city.name}</strong><small>{city.country}</small></span><span className="search-city-time">{timeLabel(clockTime.setZone(city.zone),h24)}<Plus size={16}/></span></button>):<p className="empty-search">No matching cities. Try a nearby city or a time zone like “Pacific”.</p>}</div></Modal>}
     {modal==='calendar'&&<Modal title="Your calendars" onClose={()=>setModal(null)} className="calendar-modal"><p className="modal-description">Your events, in whichever time zone you need.</p>
       {sources.length>0&&<div className="connected-calendars">{sources.map(source=><div className="connected-calendar" key={source.id}><span className="connected-icon"><CalendarDays size={18}/></span><div><strong>{source.name}</strong><small>{source.url?`${source.provider==='google'?'Google Calendar':'iCloud'} · Read-only`:'Imported file'} · {DateTime.fromISO(source.syncedAt).toFormat('LLL d, h:mm a')}</small></div>{source.url&&<button className="icon-button" disabled={loading} aria-label={`Refresh ${source.name}`} onClick={()=>connectCalendar(source.url,source)}><RefreshCw size={15}/></button>}<button className="icon-button" aria-label={`Remove ${source.name}`} onClick={()=>setSources(sources.filter(s=>s.id!==source.id))}><Trash2 size={15}/></button></div>)}</div>}
       <div className="modal-tabs"><button className={calendarTab==='file'?'active':''} onClick={()=>{setCalendarTab('file');setCalendarError('');setUrl('');}}><Upload size={15}/>Import a file</button><button className={calendarTab==='icloud'?'active':''} onClick={()=>{setCalendarTab('icloud');setCalendarError('');setUrl('');}}><Link size={15}/>iCloud link</button><button className={calendarTab==='google'?'active':''} onClick={()=>{setCalendarTab('google');setCalendarError('');setUrl('');}}><CalendarDays size={15}/>Google Calendar</button></div>

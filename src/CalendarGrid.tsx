@@ -1,11 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { DateTime } from 'luxon';
 import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp, Eye, EyeOff, House, X } from 'lucide-react';
 import { timeLabel, wallTime, type City, type Slot } from './time';
 import type { CalendarEvent } from './calendar';
-import { workHoursInDay, isWorkHour, type WorkHoursPreferences } from './workHours';
+import { workBandsInWeek, isWorkHour, getWorkColor, type WorkHoursPreferences } from './workHours';
 import WorkHoursSettings from './WorkHoursSettings';
-const workColors=[['#d6edf2','#2c6572'],['#dce8f1','#365d78'],['#f2e5c9','#7a5b27'],['#e9def0','#6b4a7c'],['#dcece5','#386752'],['#f1e0db','#825345']];
 const HOUR=48;
 interface DragSelection {
   pointerId:number; element:HTMLButtonElement; column:HTMLElement; day:DateTime;
@@ -95,8 +94,9 @@ export default function CalendarGrid({activeSlotId,onViewSlot,selectionActive,on
   const homeCity=cities[0];
   const homeId=homeCity?.id;
   const workCities=cities.filter(city=>workHours[city.id].visible);
-  const cityStyle=(id:string)=>{const color=workColors[cities.findIndex(c=>c.id===id)%workColors.length];return {'--work-bg':color[0],'--work-ink':color[1]} as React.CSSProperties;};
+  const cityStyle=(id:string)=>{const color=getWorkColor(workHours[id].color,cities.findIndex(c=>c.id===id));return {'--work-bg':color.background,'--work-ink':color.ink,'--work-band-bg':color.band} as React.CSSProperties;};
   const days=Array.from({length:7},(_,i)=>week.plus({days:i}));
+  const workBands=workCities.flatMap(city=>workBandsInWeek(week,city.zone,workHours[city.id]).map(band=>({...band,city})));
   const railCities=[base,...cities.filter(c=>c.id!==base.id)].slice(0,3);
   const local=selected.setZone(base.zone);
   const railDay=local>=week&&local<week.plus({weeks:1})?local.startOf('day'):week;
@@ -170,11 +170,6 @@ export default function CalendarGrid({activeSlotId,onViewSlot,selectionActive,on
                 onClick={e=>{if(suppressClick.current&&e.detail!==0){suppressClick.current=false;return;}if(dt&&!confirmed)onSaveRange(dt,30);}}
                 aria-label={`${day.toFormat('cccc, LLLL d')}, ${hour}:${String(minute).padStart(2,'0')} in ${base.name}. ${confirmed?'Already saved.':'Use arrow keys to move. Press Enter or Space to save.'}`} />;
             })}
-            {workCities.map(city=>workHoursInDay(day,city.zone,workHours[city.id]).map((period,i)=>{
-              const position=block(period.start.toISO()!,period.end.toISO()!,day);
-              if(position){const end=period.end.setZone(base.zone);position.height=(end>=day.plus({days:1})?1440:end.hour*60+end.minute)/60*HOUR-position.top;}
-              return position&&<div key={`${city.id}-${i}`} className="work-hours-band" data-work-city={city.id} style={{...position,...cityStyle(city.id),left:0,right:0}} aria-hidden="true"/>;
-            }))}
             {(()=>{
               const entries=[...events.filter(e=>!e.allDay).map(event=>({id:event.id,event,slot:null as Slot|null,style:block(event.start,event.end,day)})),...slots.map(slot=>({id:slot.id,event:null as CalendarEvent|null,slot,style:block(slot.start,DateTime.fromISO(slot.start).plus({minutes:slot.duration}).toISO()!,day)}))].filter(item=>item.style!==null);
               return entries.map(({id,event,slot,style})=>{
@@ -202,6 +197,15 @@ export default function CalendarGrid({activeSlotId,onViewSlot,selectionActive,on
             })()}
             {day.hasSame(now.setZone(base.zone),'day')&&<div className="now-line" style={{top:(now.setZone(base.zone).hour+now.minute/60)*HOUR}}><i/></div>}
           </div>)}
+          <div className="work-hours-overlay" aria-hidden="true">{workBands.map((band,i)=>{
+            const city=band.city;
+            const labelColumn=[...new Set(workBands.filter(other=>other.firstDay===band.firstDay).map(other=>other.city.id))].indexOf(city.id);
+            const position={top:band.startMinute/60*HOUR,height:(band.endMinute-band.startMinute)/60*HOUR,left:`${band.firstDay/7*100}%`,width:`${(band.lastDay-band.firstDay+1)/7*100}%`,...cityStyle(city.id)};
+            return <Fragment key={`${city.id}-${i}`}>
+              <div className="work-hours-band" data-work-city={city.id} style={position}/>
+              <div className="work-hours-label-track" style={{...position,paddingLeft:labelColumn*44}}><span className="work-hours-band-label" data-label-city={city.id} style={{left:4+labelColumn*44}}>{city.code}{city.id===homeId&&<House size={10}/>}</span></div>
+            </Fragment>;
+          })}</div>
         </div>
       </div>
     </div>
