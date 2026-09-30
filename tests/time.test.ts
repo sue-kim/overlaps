@@ -79,10 +79,3 @@ test('embedded daylight-saving timezone definitions are registered',()=>{
  const events=expandCalendar(s,DateTime.fromISO('2026-10-30'),DateTime.fromISO('2026-11-04'));
  assert.equal(events.length,3);assert.equal(events[0].start,'2026-10-31T13:00:00.000Z');assert.equal(events[1].start,'2026-11-01T14:00:00.000Z');
 });
-test('overlapping events occupy separate visible columns',async()=>{
- const {layoutIntervals}=await import('../src/layout');
- const layout=layoutIntervals([{id:'a',start:10,end:30},{id:'b',start:10,end:20},{id:'c',start:20,end:40},{id:'d',start:50,end:60}]);
- assert.notEqual(layout.get('a')!.column,layout.get('b')!.column);
- assert.notEqual(layout.get('a')!.column,layout.get('c')!.column);
- assert.equal(layout.get('a')!.columns,2);assert.equal(layout.get('d')!.columns,1);
-});

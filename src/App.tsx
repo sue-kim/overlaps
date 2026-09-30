@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
-import { ArrowDownToLine, ArrowRight, CalendarDays, Check, Clock3, Copy, House, Link, LoaderCircle, MapPin, Moon, Plus, RefreshCw, Search, ShieldCheck, Sun, Trash2, Upload, X } from 'lucide-react';
-import { cities, defaultCities, timeLabel, utcLabel, relativeOffset, dayDifference, wallTime, availabilityText, slotsToICS, mergeSlots, isSlotCovered, type Slot } from './time';
+import { ArrowDownToLine, ArrowRight, CalendarDays, Check, Clock3, Copy, House, Link, LoaderCircle, Moon, Plus, RefreshCw, Search, ShieldCheck, Sun, Trash2, Upload, X } from 'lucide-react';
+import { cities, defaultCities, timeLabel, utcLabel, relativeOffset, dayDifference, availabilityText, slotsToICS, mergeSlots, isSlotCovered, type Slot } from './time';
 import { calendarName, expandCalendar, validateICS, type CalendarSource, type CalendarEvent } from './calendar';
 import CalendarGrid from './CalendarGrid';
+import { defaultWorkHours, normalizeWorkHours, type WorkHoursPreferences } from './workHours';
 function initial<T>(key:string,fallback:T):T {try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback;}catch{return fallback;}}
 function AnalogClock({time,night}:{time:DateTime;night:boolean}) {return <div className={`analog-clock ${night?'night':''}`} aria-hidden="true"><i className="clock-tick top"/><i className="clock-tick right"/><i className="clock-tick bottom"/><i className="clock-tick left"/><i className="clock-hand hour" style={{transform:`rotate(${(time.hour%12)*30+time.minute/2}deg)`}}/><i className="clock-hand minute" style={{transform:`rotate(${time.minute*6}deg)`}}/><i className="clock-center"/></div>;}
 function Modal({title,onClose,children,className=''}:{title:string;onClose:()=>void;children:React.ReactNode;className?:string}) {
@@ -17,16 +18,24 @@ export default function App() {
   const home=places[0];
   const [baseId,setBaseId]=useState(()=>initial('overlap-base','seoul'));
   const base=places.find(c=>c.id===baseId)||home;
+  const [copyCityId,setCopyCityId]=useState<string>(()=>{const saved=initial('overlap-copy-city',base.id);return places.some(city=>city.id===saved)?saved:base.id;});
+  const copyCity=places.find(city=>city.id===copyCityId)||home;
   const [now,setNow]=useState(DateTime.now());
   const [selected,setSelected]=useState<DateTime>(DateTime.now().startOf('minute'));
   const [hasSelection,setHasSelection]=useState(false);
   const [live,setLive]=useState(true);
   const [weekDate,setWeekDate]=useState(DateTime.now().setZone(base.zone).startOf('week').toISODate()!);
   const week=DateTime.fromISO(weekDate,{zone:base.zone}).startOf('week');
-  const [duration,setDuration]=useState(60);
+  const [duration,setDuration]=useState(30);
   const [h24,setH24]=useState<boolean>(()=>initial<boolean>('overlap-24h',false)===true);
-  const [showWorkHours,setShowWorkHours]=useState(()=>initial<boolean>('overlap-work-hours',true)!==false);
-  const [hiddenWorkCities,setHiddenWorkCities]=useState<string[]>(()=>{const saved=initial<string[]>('overlap-hidden-work-cities',[]);return Array.isArray(saved)?saved.filter(id=>typeof id==='string'):[];});
+  const [workPreferences,setWorkPreferences]=useState<WorkHoursPreferences>(()=>{
+    const saved=initial<unknown>('overlap-work-preferences',null);
+    if(saved!==null)return normalizeWorkHours(saved);
+    const enabled=initial<boolean>('overlap-work-hours',true)!==false;
+    const hidden=initial<unknown>('overlap-hidden-work-cities',[]);
+    return Object.fromEntries(places.map((city,index)=>[city.id,defaultWorkHours(enabled&&index!==0&&!(Array.isArray(hidden)&&hidden.includes(city.id)))]));
+  });
+  const workHours=Object.fromEntries(places.map((city,index)=>[city.id,workPreferences[city.id]||defaultWorkHours(index!==0)]));
   const [storedSlots,setSlots]=useState<Slot[]>(()=>{const value=initial<Slot[]>('overlap-slots',[]);return Array.isArray(value)?value.filter(s=>DateTime.fromISO(s.start).isValid&&s.duration>0&&typeof s.id==='string'):[];});
   const slots=useMemo(()=>mergeSlots(storedSlots),[storedSlots]);
   const [sources,setSources]=useState<CalendarSource[]>(()=>{const value=initial<CalendarSource[]>('overlap-sources',[]);return Array.isArray(value)?value.filter(s=>typeof s.ics==='string'&&typeof s.name==='string'):[];});
@@ -46,11 +55,8 @@ export default function App() {
   const local=selected.setZone(base.zone);
   const clockTime=live?now:selected;
   const homeTime=clockTime.setZone(home.zone);
-  const [editDate,setEditDate]=useState('');
-  const [editTime,setEditTime]=useState('');
   useEffect(()=>{const tick=setInterval(()=>setNow(DateTime.now()),15000);return()=>clearInterval(tick);},[]);
-  useEffect(()=>{if(hasSelection){setEditDate(local.toISODate()!);setEditTime(local.toFormat('HH:mm'));}},[selected.toISO(),base.zone,hasSelection]);
-  useEffect(()=>{try {localStorage.setItem('overlap-cities',JSON.stringify(cityIds));localStorage.setItem('overlap-base',JSON.stringify(base.id));localStorage.setItem('overlap-24h',JSON.stringify(h24));localStorage.setItem('overlap-work-hours',JSON.stringify(showWorkHours));localStorage.setItem('overlap-hidden-work-cities',JSON.stringify(hiddenWorkCities));localStorage.setItem('overlap-slots',JSON.stringify(slots));localStorage.setItem('overlap-sources',JSON.stringify(sources));setStorageError('');}catch{setStorageError('Browser storage is full or unavailable. These changes will last for this session only.');}},[cityIds,base.id,h24,slots,sources,showWorkHours,hiddenWorkCities]);
+  useEffect(()=>{try {localStorage.setItem('overlap-cities',JSON.stringify(cityIds));localStorage.setItem('overlap-base',JSON.stringify(base.id));localStorage.setItem('overlap-copy-city',JSON.stringify(copyCity.id));localStorage.setItem('overlap-24h',JSON.stringify(h24));localStorage.setItem('overlap-work-preferences',JSON.stringify(workPreferences));localStorage.setItem('overlap-slots',JSON.stringify(slots));localStorage.setItem('overlap-sources',JSON.stringify(sources));setStorageError('');}catch{setStorageError('Browser storage is full or unavailable. These changes will last for this session only.');}},[cityIds,base.id,copyCity.id,h24,slots,sources,workPreferences]);
   useEffect(()=>{if(toast){const timer=setTimeout(()=>{setToast('');setClearedTimes(null);},toast==='All times cleared.'?8000:3600);return()=>clearTimeout(timer);}},[toast,clearedTimes]);
   const calendarData=useMemo(()=>{
     const events:CalendarEvent[]=[],errors:string[]=[];
@@ -62,19 +68,20 @@ export default function App() {
     catch{return [];}
   }),[sources,selected.toISO(),duration]);
   const overnight=places.filter(c=>{const h=selected.setZone(c.zone).hour;return h<7||h>=22;});
-  function selectTime(dt:DateTime,minutes=duration) {if(isSlotCovered(slots,{start:dt.toUTC().toISO()!,duration:minutes})){setHasSelection(false);setLive(true);setTimeError('This time is already saved.');return;}setDuration(minutes);setSelected(dt);setHasSelection(true);setLive(false);setTimeError('');if(dt.setZone(base.zone)<week||dt.setZone(base.zone)>=week.plus({weeks:1}))setWeekDate(dt.setZone(base.zone).startOf('week').toISODate()!);}
-  function clearSelection() {setHasSelection(false);setLive(true);setEditDate('');setEditTime('');setTimeError('');}
+  function showTime(dt:DateTime,minutes:number) {setDuration(minutes);setSelected(dt);setHasSelection(true);setLive(false);setTimeError('');if(dt.setZone(base.zone)<week||dt.setZone(base.zone)>=week.plus({weeks:1}))setWeekDate(dt.setZone(base.zone).startOf('week').toISODate()!);}
+  function selectTime(dt:DateTime,minutes=30) {minutes=Math.max(30,minutes);if(isSlotCovered(slots,{start:dt.toUTC().toISO()!,duration:minutes})){setHasSelection(false);setLive(true);setTimeError('This time is already saved.');return;}showTime(dt,minutes);}
+  function viewSlot(slot:Slot) {showTime(DateTime.fromISO(slot.start),slot.duration);}
+  function clearSelection() {setHasSelection(false);setLive(true);setTimeError('');}
   function changeBase(id:string) {const city=places.find(c=>c.id===id)!;setBaseId(id);setWeekDate(selected.setZone(city.zone).startOf('week').toISODate()!);setTimeError('');}
-  function applyWall(date:string,time:string) {if(!date||!time){setTimeError('');return;}const dt=wallTime(date,time,base.zone);if(!dt){setTimeError('This local time does not exist because the clocks move forward. Choose another time.');return;}selectTime(dt);}
-  function removeCity(id:string){if(cityIds.length===1)return;const next=cityIds.filter(c=>c!==id);setCityIds(next);if(base.id===id)setBaseId(next[0]);}
+  function removeCity(id:string){if(cityIds.length===1)return;const next=cityIds.filter(c=>c!==id);setCityIds(next);if(base.id===id)setBaseId(next[0]);if(copyCity.id===id)setCopyCityId(next[0]);}
   const currentSlot:Slot={id:crypto.randomUUID(),start:selected.toUTC().toISO()!,duration,title:'Interview availability'};
-  const selectionSaved=isSlotCovered(slots,currentSlot);
-  function saveRange(dt:DateTime,minutes:number){const slot:Slot={id:crypto.randomUUID(),start:dt.toUTC().toISO()!,duration:minutes,title:'Interview availability'};if(isSlotCovered(slots,slot))return;setSlots(old=>mergeSlots([...old,slot]));setSelected(dt);setDuration(minutes);clearSelection();setToast('Availability saved. Adjoining times are combined.');}
-  function saveSlot(){if(!hasSelection||timeError||selectionSaved)return;saveRange(selected,duration);}
-  function removeSlot(id:string){setSlots(old=>mergeSlots(old).filter(slot=>slot.id!==id));setToast('Saved time removed.');}
+  const savedSelection=slots.find(slot=>isSlotCovered([slot],currentSlot));
+  const selectionSaved=!!savedSelection;
+  function saveRange(dt:DateTime,minutes:number){minutes=Math.max(30,minutes);const slot:Slot={id:crypto.randomUUID(),start:dt.toUTC().toISO()!,duration:minutes,title:'Interview availability'};const merged=mergeSlots([...slots,slot]);const saved=merged.find(item=>isSlotCovered([item],slot))!;setSlots(old=>mergeSlots([...old,slot]));viewSlot(saved);setToast('Availability saved. Adjoining times are combined.');}
+  function removeSlot(id:string){setSlots(old=>mergeSlots(old).filter(slot=>slot.id!==id));if(hasSelection&&savedSelection?.id===id)clearSelection();setToast('Saved time removed.');}
   function clearTimes(){setClearedTimes({slots,selection:hasSelection?currentSlot:null});setSlots([]);clearSelection();setToast('All times cleared.');}
-  function undoClearTimes(){if(!clearedTimes)return;setSlots(old=>mergeSlots([...old,...clearedTimes.slots]));if(clearedTimes.selection)selectTime(DateTime.fromISO(clearedTimes.selection.start),clearedTimes.selection.duration);setClearedTimes(null);setToast('Times restored.');}
-  async function copy(items:Slot[]) {const text=availabilityText(items,places,h24);try{await navigator.clipboard.writeText(text);setToast(`${items.length===1?'Time':`${items.length} times`} copied with every city and date.`);}catch{setCopyFallback(text);setModal('copy');}}
+  function undoClearTimes(){if(!clearedTimes)return;setSlots(old=>mergeSlots([...old,...clearedTimes.slots]));if(clearedTimes.selection)showTime(DateTime.fromISO(clearedTimes.selection.start),clearedTimes.selection.duration);setClearedTimes(null);setToast('Times restored.');}
+  async function copy(items:Slot[],city=copyCity) {const text=availabilityText(items,[city],h24);try{await navigator.clipboard.writeText(text);setToast(`${items.length===1?'Time':`${items.length} times`} copied in ${city.name} time.`);}catch{setCopyFallback(text);setModal('copy');}}
   function download(items:Slot[]) {const blob=new Blob([slotsToICS(items)],{type:'text/calendar;charset=utf-8'});const link=document.createElement('a');const objectUrl=URL.createObjectURL(blob);link.href=objectUrl;link.download='overlap-availability.ics';link.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);setToast('Calendar file downloaded. Open it in Apple Calendar to add these times.');}
   function addSource(ics:string,name:string,feedUrl?:string,existingId?:string,provider?:'google'|'icloud'){validateICS(ics);const source={id:existingId||crypto.randomUUID(),name,ics,url:feedUrl,provider,syncedAt:DateTime.now().toISO()!,floatingZone:base.zone};expandCalendar(source,week,week.plus({weeks:1}));setSources(old=>existingId?old.map(s=>s.id===existingId?source:s):[...old,source]);setCalendarError('');if(!existingId)setModal(open=>open==='calendar'?null:open);setToast(existingId?'Calendar refreshed.':'Calendar added. Its events now follow your selected city.');}
   async function importFile(file?:File){if(!file)return;setCalendarError('');if(file.name.toLowerCase().endsWith('.zip')){setCalendarError('Unzip the Google Calendar export, then choose an .ics file inside.');return;}if(file.size>2_000_000){setCalendarError('Choose a calendar file smaller than 2 MB.');return;}setLoading(true);try{const text=await file.text();addSource(text,calendarName(text)==='Imported calendar'?file.name.replace(/\.ics$/i,''):calendarName(text));}catch(error){setCalendarError(error instanceof Error?error.message:'Could not read this calendar. Try exporting it again.');}finally{setLoading(false);if(fileInput.current)fileInput.current.value='';}}
@@ -90,17 +97,28 @@ export default function App() {
         <div className="city-time-row"><div><div className="city-time">{dt.toFormat(h24?'HH:mm':'h:mm')}{!h24&&<span>{dt.toFormat('a')}</span>}</div><div className="city-date">{dt.toFormat('ccc, LLL d')}{day!==0&&<span className="day-change">{day>0?'+':''}{day} day</span>}</div></div><AnalogClock time={dt} night={night}/></div>
         <div className="city-card-footer"><span>{night?<Moon size={12}/>:<Sun size={13}/>} {dt.offsetNameShort} <span className="utc-offset">{utcLabel(dt)}</span></span><span>{city.id===home.id?'Your local time':relativeOffset(dt,homeTime)}</span></div>
       </article>;})}<button className="add-city-card" onClick={()=>{setSearch('');setModal('city');}}><span><Plus size={21}/></span>Add city</button></div></section>
-      <div className="planner-layout"><CalendarGrid selectionActive={hasSelection&&!selectionSaved} onSaveRange={saveRange} onCancelSelection={clearSelection} onRemoveSlot={slot=>removeSlot(slot.id)} showWorkHours={showWorkHours} hiddenWorkCities={hiddenWorkCities} onToggleWorkHours={()=>setShowWorkHours(!showWorkHours)} onToggleWorkCity={id=>setHiddenWorkCities(old=>old.includes(id)?old.filter(item=>item!==id):[...old,id])} base={base} cities={places} week={week} selected={selected} duration={duration} h24={h24} now={now} slots={slots} events={calendarData.events} onSelect={selectTime} onSelectRange={selectTime} onWeek={date=>setWeekDate(date.toISODate()!)} onEvent={setEventDetail}/>
+      <div className="planner-layout"><CalendarGrid activeSlotId={hasSelection?savedSelection?.id:undefined} onViewSlot={viewSlot} selectionActive={hasSelection&&!selectionSaved} onSaveRange={saveRange} onCancelSelection={clearSelection} onRemoveSlot={slot=>removeSlot(slot.id)} workHours={workHours} onWorkHoursChange={preferences=>setWorkPreferences(old=>({...old,...preferences}))} base={base} cities={places} week={week} selected={selected} duration={duration} h24={h24} now={now} slots={slots} events={calendarData.events} onSelect={selectTime} onSelectRange={selectTime} onWeek={date=>setWeekDate(date.toISODate()!)} onEvent={setEventDetail}/>
         <aside id="time-planner" tabIndex={-1} className="time-panel" aria-label="Time planner"><div className="panel-heading"><h2>Find a time</h2><Clock3 size={18}/></div><p className="panel-description">Start with one city. See it everywhere.</p>
-          <div className="form-city"><MapPin size={14}/><select aria-label="Choose starting city" value={base.id} onChange={e=>changeBase(e.target.value)}>{places.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select><span>{local.offsetNameShort}</span></div>
-          <div className="time-inputs"><label>Date<input type="date" value={editDate} onChange={e=>{setEditDate(e.target.value);if(e.target.value)applyWall(e.target.value,editTime);}}/></label><label>Time<input type="time" step="900" value={editTime} onChange={e=>{setEditTime(e.target.value);if(e.target.value)applyWall(editDate,e.target.value);}}/></label></div>
           {timeError&&<p role="alert" className="inline-error">{timeError}</p>}
           {possible.length>1&&<label className="dst-choice">This time occurs twice<select aria-label="Daylight saving occurrence" value={local.offset} onChange={e=>selectTime(possible.find(t=>t.offset===Number(e.target.value))!)}>{possible.map(t=><option value={t.offset} key={t.offset}>{t.offsetNameShort} ({utcLabel(t)})</option>)}</select></label>}
-          <div className="duration-row"><label htmlFor="duration">Duration</label><select id="duration" value={duration} onChange={e=>setDuration(Number(e.target.value))}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option>{![15,30,45,60,90,120].includes(duration)&&<option value={duration}>{Math.floor(duration/60)} h{duration%60?` ${duration%60} min`:""}</option>}</select></div>
           {hasSelection?<>
           <div className="city-comparisons">{places.map(city=>{const dt=selected.setZone(city.zone),end=dt.plus({minutes:duration});return <div className="comparison-row" key={city.id}><span className={`city-dot ${city.id===home.id?'home-dot':''}`}/><div className="comparison-city"><strong>{city.name}</strong><span>{dt.toFormat('ccc, LLL d')} · {dt.offsetNameShort}</span></div><div className="comparison-time"><strong>{timeLabel(dt,h24)}</strong><span>to {timeLabel(end,h24)}{!end.hasSame(dt,'day')?' (+1 day)':''}</span></div></div>;})}</div>
-          <div className={`timing-note ${conflicts.length?'conflict':''}`}>{conflicts.length?<><CalendarDays size={15}/><span>Overlaps {conflicts.length} calendar {conflicts.length===1?'event':'events'}.</span></>:overnight.length?<><Moon size={15}/><span>A late night or early start in {overnight.map(c=>c.name).join(' and ')}.</span></>:<><Sun size={15}/><span>Everyone is within daytime hours.</span></>}</div></>:<p className="selection-empty">Click or drag on the calendar to save a time, or enter a date and time above.</p>}
-          <div className="panel-actions"><button className="button button-primary" aria-label="Save availability" onClick={saveSlot} disabled={!hasSelection||!!timeError||selectionSaved}><Plus size={16}/>Save time</button><button className="button copy-button" aria-label={slots.length?`Copy times (${slots.length} saved)`:'Copy this time'} title={slots.length?`Copy all ${slots.length} saved ${slots.length===1?'time':'times'}`:'Copy selected time'} onClick={()=>copy(slots.length?slots:[currentSlot])} disabled={!slots.length&&(!hasSelection||!!timeError)}><Copy size={15}/>{slots.length?'Copy times':'Copy time'}</button></div>
+          <div className={`timing-note ${conflicts.length?'conflict':''}`}>{conflicts.length?<><CalendarDays size={15}/><span>Overlaps {conflicts.length} calendar {conflicts.length===1?'event':'events'}.</span></>:overnight.length?<><Moon size={15}/><span>A late night or early start in {overnight.map(c=>c.name).join(' and ')}.</span></>:<><Sun size={15}/><span>Everyone is within daytime hours.</span></>}</div></>:<p className="selection-empty">Click or drag on the calendar to save a time.</p>}
+          {slots.length>0&&<section className="saved-availability" aria-labelledby="saved-availability-heading">
+            <div className="saved-availability-heading"><h3 id="saved-availability-heading">Saved times</h3><span>{slots.length}</span></div>
+            <label className="saved-timezone">Time zone<select aria-label="Saved times time zone" value={copyCity.id} onChange={e=>setCopyCityId(e.target.value)}>{places.map(city=><option value={city.id} key={city.id}>{city.name}</option>)}</select></label>
+            <ol className="availability-list">{slots.map(slot=>{
+              const start=DateTime.fromISO(slot.start).setZone(copyCity.zone),end=start.plus({minutes:slot.duration});
+              const date=start.toFormat('cccc, LLL d, yyyy');
+              const range=`${timeLabel(start,h24)}–${end.hasSame(start,'day')?'':`${end.toFormat('ccc, LLL d')} · `}${timeLabel(end,h24)}`;
+              const active=hasSelection&&savedSelection?.id===slot.id;
+              return <li className="availability-row" data-active={active} key={slot.id}>
+                <button className="availability-view" aria-label={`View ${date}, ${range} in ${copyCity.name}`} aria-pressed={active} onClick={()=>viewSlot(slot)}><strong>{date}</strong><span>{range}</span></button>
+                <button className="availability-remove" aria-label={`Remove availability: ${date}, ${range} in ${copyCity.name}`} title="Remove this time" onClick={()=>removeSlot(slot.id)}><X size={14}/></button>
+              </li>;
+            })}</ol>
+          </section>}
+          <div className="panel-actions"><button className="button copy-button" aria-label={slots.length?`Copy times (${slots.length} saved)`:'Copy this time'} title={slots.length?`Copy all ${slots.length} saved ${slots.length===1?'time':'times'} in ${copyCity.name} time`:`Copy selected time in ${base.name} time`} onClick={()=>copy(slots.length?slots:[currentSlot],slots.length?copyCity:base)} disabled={!slots.length&&(!hasSelection||!!timeError)}><Copy size={15}/>{slots.length?'Copy times':'Copy time'}</button></div>
           <button className="clear-times-button" onClick={clearTimes} disabled={!slots.length&&!hasSelection} title="Clear all saved times and the current selection"><Trash2 size={13}/>Clear all</button>
         </aside>
       </div>

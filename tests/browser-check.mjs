@@ -30,7 +30,7 @@ await page.getByText('QA calendar',{exact:true}).waitFor();
 await page.getByRole('button',{name:'Close dialog'}).click();
 assert.equal(await page.locator('.imported-event').count(),2);
 const boxes=await page.locator('.imported-event').evaluateAll(els=>els.map(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right})));
-assert.ok(boxes[0].right<=boxes[1].left||boxes[1].right<=boxes[0].left,'overlapping events must remain visible');
+assert.ok(Math.abs(boxes[0].left-boxes[1].left)<1&&Math.abs(boxes[0].right-boxes[1].right)<1,'overlapping events share the day column width');
 await page.getByLabel('Date',{exact:true}).fill('2026-09-29');
 await page.getByLabel('Time',{exact:true}).fill('10:00');
 await page.getByText('Overlaps 2 calendar events.').waitFor();
