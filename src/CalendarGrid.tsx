@@ -39,6 +39,12 @@ export default function CalendarGrid({activeSlotId,onViewSlot,selectionActive,on
     // Showing the selection must not move the calendar under the pointer.
     container.scrollTop+=active.column.getBoundingClientRect().top-active.columnTop;
   });
+  useLayoutEffect(()=>{
+    const focused=document.activeElement,container=scroll.current;
+    if(!container||!(focused instanceof HTMLElement)||!container.contains(focused)||!focused.matches('.time-cell.confirmed'))return;
+    // The saved block replaces the grid cells, including their keyboard focus.
+    container.querySelector<HTMLButtonElement>('.saved-event[data-active=true] .saved-time-details')?.focus({preventScroll:true});
+  },[activeSlotId,slots]);
 
   function updateDrag(clientY:number) {
     const active=drag.current;if(!active)return;

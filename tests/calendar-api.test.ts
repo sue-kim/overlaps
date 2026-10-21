@@ -24,16 +24,18 @@ after(()=>server.listening?new Promise<void>((resolve,reject)=>server.close(erro
 
 test('Vercel HTTPS requests can import a feed without caching it',async t=>{
   const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR';
+  const from='2026-10-01T00:00:00.000Z';
   const upstream=t.mock.method(globalThis,'fetch',async(url:string,options:RequestInit)=>{
     assert.equal(url,feed);
     assert.equal(options.redirect,'error');
+    assert.equal(options.cache,'no-store');
     assert.ok(options.signal);
     return new Response(ics);
   });
-  const response=await request(endpoint,{method:'POST',headers,body:JSON.stringify({url:feed})});
+  const response=await request(endpoint,{method:'POST',headers,body:JSON.stringify({url:feed,from})});
   assert.equal(response.status,200);
   assert.equal(response.headers.get('cache-control'),'no-store');
-  assert.deepEqual(await response.json(),{ics,provider:'google'});
+  assert.deepEqual(await response.json(),{ics,provider:'google',importedFrom:from});
   assert.equal(upstream.mock.callCount(),1);
 });
 
@@ -52,7 +54,7 @@ test('calendar endpoint rejects unsupported feed URLs before fetching',async t=>
 });
 
 test('calendar endpoint rejects oversized and non-calendar responses',async t=>{
-  const upstream=t.mock.method(globalThis,'fetch',async()=>new Response('too large',{headers:{'Content-Length':'2000001'}}));
+  const upstream=t.mock.method(globalThis,'fetch',async()=>new Response('too large',{headers:{'Content-Length':'50000001'}}));
   const large=await request(endpoint,{method:'POST',headers,body:JSON.stringify({url:feed})});
   assert.equal(large.status,413);
   upstream.mock.mockImplementation(async()=>new Response('<html>not a calendar</html>'));

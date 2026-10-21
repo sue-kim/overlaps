@@ -4,12 +4,116 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f2f8fa" />
-    <meta name="description" content="Find a time that works across Seoul, San Francisco, New York, and the rest of your world. A personal world clock and calendar planner." />
-    <title>Overlap — Your time, everywhere</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%230e7185'/%3E%3Ccircle cx='25' cy='32' r='15' fill='%23fff' fill-opacity='.7'/%3E%3Ccircle cx='39' cy='32' r='15' fill='%2395dbe7' fill-opacity='.7'/%3E%3C/svg%3E" />
+    <meta name="description" content="Find a meeting time across time zones without changing your laptop’s clock. Compare cities and calendars, then copy your availability. Free, no account needed." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="author" content="Sue Kim" />
+    <meta name="google-site-verification" content="kbtyLwRXhL_t-6z2D4qbdN0MFDS2r7qvkA7L3azKuoE" />
+    <title>Overlap — Free Time Zone Meeting Planner &amp; World Clock</title>
+    <link rel="canonical" href="https://overlaps-time.vercel.app/" />
+    <link rel="describedby" href="/llms.txt" type="text/plain" />
+    <link rel="alternate" href="/index.md" type="text/markdown" title="Overlap product guide in Markdown" />
+    <link rel="stylesheet" href="/src/discovery.css" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Overlap" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Overlap — Free Time Zone Meeting Planner &amp; World Clock" />
+    <meta property="og:description" content="Find a meeting time across time zones without changing your laptop’s clock. Compare cities and calendars, then copy your availability. Free, no account needed." />
+    <meta property="og:url" content="https://overlaps-time.vercel.app/" />
+    <meta property="og:image" content="https://overlaps-time.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Overlap: find a time across cities, with world clocks and saved availability." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Overlap — Free Time Zone Meeting Planner &amp; World Clock" />
+    <meta name="twitter:description" content="Find a meeting time across time zones without changing your laptop’s clock. Compare cities and calendars, then copy your availability. Free, no account needed." />
+    <meta name="twitter:image" content="https://overlaps-time.vercel.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Overlap: find a time across cities, with world clocks and saved availability." />
+    <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://overlaps-time.vercel.app/#website",
+      "url": "https://overlaps-time.vercel.app/",
+      "name": "Overlap",
+      "description": "Find a meeting time across time zones without changing your laptop’s clock. Compare cities and calendars, then copy your availability. Free, no account needed.",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://overlaps-time.vercel.app/#webpage",
+      "url": "https://overlaps-time.vercel.app/",
+      "name": "Overlap — Free Time Zone Meeting Planner & World Clock",
+      "description": "Find a meeting time across time zones without changing your laptop’s clock. Compare cities and calendars, then copy your availability. Free, no account needed.",
+      "isPartOf": {
+        "@id": "https://overlaps-time.vercel.app/#website"
+      },
+      "about": {
+        "@id": "https://overlaps-time.vercel.app/#application"
+      },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://overlaps-time.vercel.app/#application",
+      "name": "Overlap",
+      "url": "https://overlaps-time.vercel.app/",
+      "description": "A free world clock and time zone meeting planner for comparing cities, viewing read-only calendar events, and sharing availability.",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Any operating system with a modern web browser",
+      "browserRequirements": "Requires JavaScript for the interactive planner.",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "image": "https://overlaps-time.vercel.app/og-image.png",
+      "creator": {
+        "@type": "Person",
+        "name": "Sue Kim",
+        "url": "https://www.eunsukim.com/"
+      },
+      "sameAs": [
+        "https://www.eunsukim.com/projects/overlap",
+        "https://github.com/sue-kim/overlaps"
+      ],
+      "featureList": [
+        "World clocks and date-aware time zone conversion",
+        "Configurable local work hours",
+        "Saved availability copied in a selected time zone",
+        "Read-only Google Calendar and iCloud feed connections",
+        "Automatic calendar updates while the app is visible",
+        "Local .ics calendar imports",
+        "Browser-local storage without an account"
+      ]
+    }
+  ]
+}</script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" tabindex="-1"><noscript><p class="planner-noscript">Enable JavaScript to use the interactive planner, or <a href="/index.md">read the Overlap guide</a>.</p></noscript></div>
+    <dialog id="overlap-guide-dialog" class="guide-modal" aria-label="How Overlap works">
+      <form method="dialog" class="guide-modal-heading"><span>How Overlap works</span><button class="icon-button" aria-label="Close guide" autofocus><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></form>
+    <section class="product-guide" id="about-overlap" aria-label="Quick guide">
+      <p class="guide-summary">Compare cities and share a time that works.</p>
+      <ol class="guide-steps" id="how-it-works">
+        <li><strong>Add your cities.</strong> See local times and working hours together.</li>
+        <li><strong>Pick a time.</strong> Click or drag on the calendar. Connect your calendar to see existing events.</li>
+        <li><strong>Share it.</strong> Choose the recipient’s time zone under Saved times, then copy your availability.</li>
+      </ol>
+      <p class="guide-footnote">Free. No account needed. Your plans stay in this browser.</p>
+      <a class="guide-cta" href="#root">Back to planner</a>
+      <details class="guide-privacy" id="analytics-privacy">
+        <summary>Analytics privacy</summary>
+        <p>When analytics is enabled on this site, you can choose whether to allow Google Analytics to measure visits and general actions such as adding a city, saving availability, connecting a calendar, or copying times. Google’s analytics script loads only after you allow it.</p>
+        <p>Our analytics events do not include calendar names, event titles, feed links, selected dates or times, copied text, or form values. Page URLs are sent without query strings or fragments, and referral links are reduced to their website origin. Google may also process standard browser, device, and network information as part of Analytics.</p>
+        <p>You can decline or change your choice through Analytics preferences in the planner footer. Declining keeps the planner available. Withdrawing consent clears this site’s analytics cookies and reloads the page to stop the analytics script. See <a href="https://policies.google.com/privacy">Google’s privacy policy</a> for information about Google’s processing.</p>
+      </details>
+
+    </section>
+    </dialog>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

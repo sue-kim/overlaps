@@ -1,0 +1,28 @@
+# Overlap
+
+> Overlap is a free world clock and time zone meeting planner. Find a time across cities without changing your laptop's time zone. No account is required.
+
+Compare city clocks, local work hours, and read-only calendar events. Save availability and copy it in a selected city's time zone. Useful for remote work, interviews, and conversations across cities.
+
+## Product information
+
+- [Planner and product guide](https://overlaps-time.vercel.app/): Official application, features, instructions, and answers to common questions.
+- [Sharing availability for interviews and remote teams](https://overlaps-time.vercel.app/#meeting-scenarios): Practical steps for choosing and copying times in the recipient's time zone.
+- [Seoul and San Francisco meeting example](https://overlaps-time.vercel.app/#seoul-san-francisco): Dated conversions explaining next-day differences and seasonal clock changes.
+- [Product guide in Markdown](https://overlaps-time.vercel.app/index.md): Capabilities, calendar updates, storage, and limitations in plain text.
+- [Project story](https://www.eunsukim.com/projects/overlap): Design and development context from the creator.
+- [Source code](https://github.com/sue-kim/overlaps): Application source and usage documentation.
+
+## Calendar and data facts
+
+Google Calendar iCal feeds and public iCloud feeds are read-only. They can refresh every five minutes while Overlap is open and visible. Imported .ics files are snapshots and can be replaced with a fresh export. Imports retain the current month and future events.
+
+Cities, preferences, calendars, feed links, and saved availability are stored in the visitor's browser. File imports are processed locally. Connected feed URLs are sent to the app server to retrieve events; the server does not store the calendar. There is no account, cross-device sync, meeting booking, or calendar write-back. Calendar contents are not public site content.
+
+## Creator
+
+Designed and built by [Sue Kim](https://www.eunsukim.com/).
+
+## Optional analytics
+
+When Google Analytics is configured, it loads only after the visitor opts in. It measures page visits and general actions such as saving or copying availability. The app's analytics events omit calendar contents, feed links, selected dates and times, copied text, and entered values. Page URLs omit query strings and fragments, and referrers include only their origin. Google can also process standard browser, device, and network information. Visitors can decline or change their choice using Analytics preferences; the planner works either way.

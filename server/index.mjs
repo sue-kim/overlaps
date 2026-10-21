@@ -5,8 +5,10 @@ import { createCalendarApp } from './calendar-app.mjs';
 const app = createCalendarApp();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 if(process.env.NODE_ENV==='production') {
+  app.get('/index.html',(_req,res)=>res.redirect(308,'/'));
+  app.get('/index.md',(_req,res,next)=>{res.type('text/markdown').set('Link','<https://overlaps-time.vercel.app/>; rel="canonical"');next();});
   app.use(express.static(path.join(root,'dist')));
-  app.get('/{*path}',(_req,res)=>res.sendFile(path.join(root,'dist','index.html')));
+  app.use((_req,res)=>res.status(404).set('X-Robots-Tag','noindex').type('text/plain').send('Page not found. Open / for the Overlap planner.'));
 } else {
   const {createServer}=await import('vite');
   const vite=await createServer({root,server:{middlewareMode:true},appType:'spa'});

@@ -1,0 +1,7 @@
+# Public product information is available to search and AI retrieval crawlers.
+# Calendar feeds are fetched through a non-indexable API, never public pages.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://overlaps-time.vercel.app/sitemap.xml
