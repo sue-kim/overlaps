@@ -6,11 +6,12 @@ import { getWorkColor, workColors, validWorkSchedule, type WorkHoursPreferences 
 const weekdays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 interface Props {
   cities:City[];
+  h24:boolean;
   preferences:WorkHoursPreferences;
   onSave:(preferences:WorkHoursPreferences)=>void;
 }
 
-export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
+export default function WorkHoursSettings({cities,h24,preferences,onSave}:Props) {
   const id=useId();
   const popover=useRef<HTMLDivElement>(null);
   const trigger=useRef<HTMLButtonElement>(null);
@@ -24,11 +25,29 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
   const city=cities.find(item=>item.id===cityId)||cities[0];
   const schedule=draft[city.id]||preferences[city.id];
   const selectedColor=getWorkColor(schedule.color,cities.findIndex(item=>item.id===city.id));
+  const minutes=(time:string)=>{const [hour,minute]=time.split(':').map(Number);return hour*60+minute;};
+  const startMinute=minutes(schedule.start),endMinute=minutes(schedule.end)||1440;
+  const timeText=(value:number)=>{
+    const hour=Math.floor(value/60)%24,minute=String(value%60).padStart(2,'0');
+    return h24?`${String(hour).padStart(2,'0')}:${minute}`:`${hour%12||12}:${minute} ${hour<12?'AM':'PM'}`;
+  };
+  function updateTime(field:'start'|'end',value:number) {
+    const bounded=field==='start'?Math.min(value,1425):value;
+    const time=`${String(Math.floor(bounded/60)%24).padStart(2,'0')}:${String(bounded%60).padStart(2,'0')}`;
+    if(time!==schedule[field==='start'?'end':'start'])updateSchedule({[field]:time});
+  }
   const colorOptions=[selectedColor,...workColors.filter(color=>color.id!==selectedColor.id)];
   const colorOwner=(band:string)=>cities.find((item,index)=>item.id!==city.id&&getWorkColor((draft[item.id]||preferences[item.id]).color,index).band===band);
   const invalidCities=cities.filter(item=>!validWorkSchedule(draft[item.id]||preferences[item.id]));
   function updateSchedule(changes:Partial<typeof schedule>) {
     setDraft(old=>({...old,[city.id]:{...schedule,...changes,visible:true}}));
+  }
+  function selectColor(color:typeof selectedColor) {
+    const owner=colorOwner(color.band);
+    setDraft(old=>({...old,
+      ...(owner?{[owner.id]:{...(old[owner.id]||preferences[owner.id]),color:selectedColor.id}}:{}),
+      [city.id]:{...(old[city.id]||preferences[city.id]),color:color.id,visible:true}
+    }));
   }
   useLayoutEffect(()=>{
     if(!open)return;
@@ -70,9 +89,16 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
           const selected=schedule.days.includes(index+1);
           return <button key={day} type="button" aria-label={day} aria-pressed={selected} onClick={()=>updateSchedule({days:selected?schedule.days.filter(value=>value!==index+1):[...schedule.days,index+1].sort()})}>{day.slice(0,3)}</button>;
         })}</div></fieldset>
-        <div className="work-settings-times">
-          <label>Start<input type="time" required step="900" value={schedule.start} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>updateSchedule({start:event.target.value})}/></label>
-          <label>End<input type="time" required step="900" value={schedule.end} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>updateSchedule({end:event.target.value})}/></label>
+        <div className="work-settings-hours" role="group" aria-label="Working hours">
+          <div className="work-hours-value"><span>Hours</span><output>{timeText(startMinute)} – {timeText(endMinute)}</output></div>
+          <div className="work-hours-slider">
+            <div className="work-hours-track" aria-hidden="true">
+              {endMinute>startMinute?<span style={{left:`${startMinute/14.4}%`,width:`${(endMinute-startMinute)/14.4}%`}}/>:<><span style={{width:`${endMinute/14.4}%`}}/><span style={{left:`${startMinute/14.4}%`,right:0}}/></>}
+            </div>
+            <input type="range" min="0" max="1440" step="15" value={startMinute} aria-label="Work starts" aria-valuetext={timeText(startMinute)} onChange={event=>updateTime('start',Number(event.target.value))}/>
+            <input type="range" min="0" max="1440" step="15" value={endMinute} aria-label="Work ends" aria-valuetext={timeText(endMinute)} onChange={event=>updateTime('end',Number(event.target.value))}/>
+          </div>
+          <div className="work-hours-scale" aria-hidden="true"><span>{h24?'00:00':'12 AM'}</span><span>{h24?'12:00':'12 PM'}</span><span>{h24?'24:00':'12 AM'}</span></div>
         </div>
         <div className="work-settings-colors" role="group" aria-labelledby={`${id}-color`}>
           <span id={`${id}-color`}>Color</span>
@@ -81,7 +107,7 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
             onPointerLeave={event=>{if(event.pointerType==='touch')return;paletteHovered.current=false;if(!palette.current?.querySelector(':focus-visible'))setColorsExpanded(false);}}
             onFocus={event=>{if(event.target.matches(':focus-visible'))setColorsExpanded(true);}}
             onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget)&&!paletteHovered.current)setColorsExpanded(false);}}>
-            {colorOptions.map((color,index)=><button key={color.id} type="button" aria-label={color.name} title={colorOwner(color.band)?`${color.name} · used by ${colorOwner(color.band)!.name}`:color.name} disabled={!!colorOwner(color.band)} aria-pressed={selectedColor.id===color.id} aria-hidden={!colorsExpanded&&index!==0} tabIndex={!colorsExpanded&&index!==0?-1:0} style={{'--swatch-color':color.band,'--color-index':index} as React.CSSProperties} onClick={()=>{if(!colorsExpanded){setColorsExpanded(true);return;}updateSchedule({color:color.id});if(!paletteHovered.current)setColorsExpanded(false);}}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={14}/>}</span></button>)}
+            {colorOptions.map((color,index)=><button key={color.id} type="button" aria-label={color.name} title={color.name} aria-pressed={selectedColor.id===color.id} aria-hidden={!colorsExpanded&&index!==0} tabIndex={!colorsExpanded&&index!==0?-1:0} style={{'--swatch-color':color.background,'--swatch-ink':color.ink,'--color-index':index} as React.CSSProperties} onClick={()=>{if(!colorsExpanded){setColorsExpanded(true);return;}selectColor(color);if(!paletteHovered.current)setColorsExpanded(false);}}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={14}/>}</span></button>)}
           </div>
         </div>
         {!schedule.days.length?<p className="work-settings-note">No working days selected for {city.name}.</p>:schedule.end<schedule.start&&<p className="work-settings-note">Ends the following day.</p>}

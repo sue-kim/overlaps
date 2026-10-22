@@ -30,8 +30,6 @@
 .work-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .work-settings-heading h3{font-size:14px;font-weight:550}
 
-.work-settings-times label{display:flex;flex-direction:column;gap:7px;font-size:11px;color:#506b74}
-.work-settings-popover input{width:100%;min-width:0;min-height:34px;padding:6px 8px;border:1px solid #dce7eb;border-radius:6px;background:#fff;color:var(--ink);font:inherit;font-size:12px}
 .work-settings-days{border:0;margin:16px 0;padding:0;min-width:0}
 .work-settings-days legend{padding:0;margin-bottom:7px;font-size:11px;color:#506b74}
 .work-settings-days>div{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
@@ -46,7 +44,19 @@
 
 
 @media(pointer:coarse){}
-.work-settings-times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.work-hours-value{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:#506b74}
+.work-hours-value output{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.work-hours-slider{position:relative;height:40px;margin:0 1px}
+.work-hours-track{position:absolute;left:10px;right:10px;top:18px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.work-hours-track span{position:absolute;height:100%;background:var(--accent)}
+.work-hours-slider input{position:absolute;inset:0;width:100%;height:40px;margin:0;padding:0;border:0;background:transparent;appearance:none;pointer-events:none;outline:none}
+.work-hours-slider input::-webkit-slider-runnable-track{height:4px;background:transparent}
+.work-hours-slider input::-moz-range-track{height:4px;background:transparent}
+.work-hours-slider input::-webkit-slider-thumb{appearance:none;width:20px;height:20px;margin-top:-8px;border:2px solid var(--accent);border-radius:50%;background:#fff;pointer-events:auto;cursor:ew-resize;touch-action:none}
+.work-hours-slider input::-moz-range-thumb{box-sizing:border-box;width:20px;height:20px;border:2px solid var(--accent);border-radius:50%;background:#fff;pointer-events:auto;cursor:ew-resize;touch-action:none}
+.work-hours-slider input:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent);outline-offset:3px}
+.work-hours-slider input:focus-visible::-moz-range-thumb{outline:2px solid var(--accent);outline-offset:3px}
+.work-hours-scale{display:flex;justify-content:space-between;font-size:10px;color:#506b74}
 .work-settings-note{margin-top:8px;font-size:11px;color:#506b74}
 .work-settings-error{margin-top:8px;font-size:11px;color:#a2462e;line-height:1.5}
 .work-settings-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
@@ -114,10 +124,8 @@
 .work-color-palette{--color-step:24px;--color-size:24px;position:relative;flex-shrink:0;width:var(--color-size);height:32px;transition:width .24s cubic-bezier(.16,1,.3,1)}
 .work-color-palette[data-expanded=true]{width:calc((var(--color-count) - 1)*var(--color-step) + var(--color-size))}
 .work-color-palette button{position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center;width:var(--color-size);height:32px;padding:3px;border:0;border-radius:4px;color:#fff;transition:transform .24s cubic-bezier(.16,1,.3,1),opacity .16s ease,visibility .24s}
-.work-color-palette button>span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--swatch-color)}
-.work-color-palette button[aria-pressed=true]{z-index:1;background:#eef3f4}
-.work-color-palette button:hover:not(:disabled){background:#eef3f4}
-.work-color-palette button:disabled{opacity:1}
+.work-color-palette button>span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--swatch-color);color:var(--swatch-ink)}
+.work-color-palette button[aria-pressed=true]{z-index:1}
 .work-color-palette[data-expanded=false] button:not([aria-pressed=true]){transform:translateX(0) scale(.7);opacity:0;visibility:hidden;pointer-events:none}
 .work-color-palette[data-expanded=true] button{transform:translateX(calc(var(--color-index)*var(--color-step)));opacity:1;visibility:visible;transition-delay:calc(var(--color-index)*10ms)}
 @media(pointer:coarse){.work-color-palette{--color-size:30px;--color-step:30px;height:44px}.work-color-palette button{height:44px}}
