@@ -119,14 +119,14 @@ export function availabilityText(slots:Slot[], places:City[], h24=false) {
       const showZones=start.offset!==end.offset||start.getPossibleOffsets().length>1||end.getPossibleOffsets().length>1;
       const compactStart=!h24&&sameDay&&!showZones&&start.toFormat('a')===end.toFormat('a');
       const startTime=compactStart?start.toFormat('h:mm'):timeLabel(start,h24);
-      const endDate=sameDay?'':end.toFormat('cccc, LLLL d, yyyy')+', ';
+      const endDate=sameDay?'':end.toFormat('cccc, LLLL d')+', ';
       const time=`${startTime}${showZones?' '+start.offsetNameShort:''}–${endDate}${timeLabel(end,h24)}${showZones?' '+end.offsetNameShort:''}`;
       const key=start.toISODate()!;
       const day=days.get(key);
       if(day)day.times.push(time);
       else days.set(key,{date:start,times:[time]});
     }
-    return `${city.name} time:\n`+[...days.values()].map(day=>`${day.date.toFormat('cccc, LLLL d, yyyy')}: ${day.times.join(', ')}`).join('\n');
+    return `${city.name} time:\n`+[...days.values()].map(day=>`${day.date.toFormat('cccc, LLLL d')}: ${day.times.join(', ')}`).join('\n');
   });
   return 'I am available at the following times:\n\n'+sections.join('\n\n')+'\n\nPlease let me know which time works best for you.';
 }

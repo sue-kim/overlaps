@@ -1,7 +1,20 @@
 import ICAL from 'ical.js';
 import { DateTime } from 'luxon';
-export interface CalendarSource {id:string; name:string; ics:string; url?:string; provider?:'google'|'icloud'; syncedAt:string; floatingZone:string}
+import { futureCalendar } from './future-calendar.js';
+export interface CalendarSource {id:string; name:string; ics:string; url?:string; provider?:'google'|'icloud'; syncedAt:string; floatingZone:string; importedFrom?:string}
 export interface CalendarEvent {id:string; title:string; start:string; end:string; allDay:boolean; sourceId:string; sourceName:string}
+export function updatedCalendarSource(text:string, options:{existing?:CalendarSource;name?:string;url?:string;provider?:'google'|'icloud';floatingZone:string;now?:DateTime;importedFrom?:string}):CalendarSource {
+  const {existing}=options;
+  const now=options.now||DateTime.now();
+  const floatingZone=existing?.floatingZone||options.floatingZone;
+  const importedFrom=options.importedFrom||now.setZone(floatingZone).startOf('month').toISO()!;
+  const ics=futureCalendar(text,{from:importedFrom,floatingZone});
+  const importedName=calendarName(ics);
+  const source:CalendarSource={id:existing?.id||crypto.randomUUID(),name:existing?.name||(importedName==='Imported calendar'?options.name||importedName:importedName),ics,url:options.url??existing?.url,provider:options.provider??existing?.provider,syncedAt:now.toISO()!,floatingZone,importedFrom};
+  const week=now.setZone(floatingZone).startOf('week');
+  expandCalendar(source,week,week.plus({weeks:1}));
+  return source;
+}
 export function validateICS(text:string) {
   if(text.length>2_000_000) throw new Error('This calendar is too large. Please import a file smaller than 2 MB.');
   if(!text.trim().startsWith('BEGIN:VCALENDAR')) throw new Error('This is not an iCalendar file. Choose a calendar exported as .ics.');
@@ -43,7 +56,8 @@ export function expandCalendar(source:CalendarSource, from:DateTime, to:DateTime
       const startTime=DateTime.fromISO(a,{zone:from.zoneName!});
       let endTime=DateTime.fromISO(b,{zone:from.zoneName!});
       if(endTime<=startTime) endTime=startTime.plus(start.isDate?{days:1}:{minutes:30});
-      if(startTime<to && endTime>from) result.push({id:`${source.id}-${event.uid}-${key}`,title:item.summary||'Untitled event',start:a,end:start.isDate?endTime.toISODate()!:endTime.toUTC().toISO()!,allDay:start.isDate,sourceId:source.id,sourceName:source.name});
+      const importedFrom=source.importedFrom?DateTime.fromISO(source.importedFrom):null;
+      if(startTime<to && endTime>from && (!importedFrom || endTime>importedFrom || startTime>=importedFrom)) result.push({id:`${source.id}-${event.uid}-${key}`,title:item.summary||'Untitled event',start:a,end:start.isDate?endTime.toISODate()!:endTime.toUTC().toISO()!,allDay:start.isDate,sourceId:source.id,sourceName:source.name});
     };
     if(event.isRecurring()) {
       const iterator=event.iterator();

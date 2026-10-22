@@ -39,6 +39,12 @@ export default function CalendarGrid({activeSlotId,onViewSlot,selectionActive,on
     // Showing the selection must not move the calendar under the pointer.
     container.scrollTop+=active.column.getBoundingClientRect().top-active.columnTop;
   });
+  useLayoutEffect(()=>{
+    const focused=document.activeElement,container=scroll.current;
+    if(!container||!(focused instanceof HTMLElement)||!container.contains(focused)||!focused.matches('.time-cell.confirmed'))return;
+    // The saved block replaces the grid cells, including their keyboard focus.
+    container.querySelector<HTMLButtonElement>('.saved-event[data-active=true] .saved-time-details')?.focus({preventScroll:true});
+  },[activeSlotId,slots]);
 
   function updateDrag(clientY:number) {
     const active=drag.current;if(!active)return;
@@ -141,7 +147,7 @@ export default function CalendarGrid({activeSlotId,onViewSlot,selectionActive,on
           <span className="work-city-dot" aria-hidden="true"/>{city.name}{city.id===homeId&&<House size={11} aria-label="Home"/>}{visible?<Eye size={13} aria-hidden="true"/>:<EyeOff size={13} aria-hidden="true"/>}
         </button>;
       })}</div>
-      <WorkHoursSettings cities={cities} preferences={workHours} onSave={onWorkHoursChange}/>
+      <WorkHoursSettings cities={cities} h24={h24} preferences={workHours} onSave={onWorkHoursChange}/>
     </div>
     <>{hasOffsetChange&&<p className="dst-week-note">Clocks change this week. Side time labels follow {railDay.toFormat('ccc, LLL d')}; select a day to compare its exact times.</p>}</><div className="calendar-scroll" ref={scroll}>
       <div className="calendar-inner" style={{'--rail-width':`${railWidth}px`} as React.CSSProperties}>

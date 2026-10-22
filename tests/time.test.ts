@@ -25,8 +25,8 @@ test('half-hour time zones retain their minutes',()=>{
 });
 test('copy text includes dates, named cities, and midnight rollover without UTC offsets',()=>{
  const text=availabilityText([{id:'one',start:'2026-09-29T14:30:00Z',duration:60,title:'Available'}],cities.slice(0,3));
- assert.match(text,/Seoul time:\nTuesday, September 29, 2026: 11:30 PM–Wednesday, September 30, 2026, 12:30 AM/);
- assert.match(text,/San Francisco time:\nTuesday, September 29, 2026: 7:30–8:30 AM/);
+ assert.match(text,/Seoul time:\nTuesday, September 29: 11:30 PM–Wednesday, September 30, 12:30 AM/);
+ assert.match(text,/San Francisco time:\nTuesday, September 29: 7:30–8:30 AM/);
  assert.doesNotMatch(text,/UTC[+-]/);
 });
 test('copy text groups days and merges adjoining or overlapping slots without filling gaps',()=>{
@@ -39,7 +39,7 @@ test('copy text groups days and merges adjoining or overlapping slots without fi
  ];
  const original=JSON.stringify(slots);
  const text=availabilityText(slots,cities.slice(0,3));
- assert.match(text,/Seoul time:\nMonday, September 28, 2026: 6:00–7:00 PM\nTuesday, September 29, 2026: 6:00–8:00 PM, 10:00–10:30 PM/);
+ assert.match(text,/Seoul time:\nMonday, September 28: 6:00–7:00 PM\nTuesday, September 29: 6:00–8:00 PM, 10:00–10:30 PM/);
  assert.equal((text.match(/Seoul time:/g)||[]).length,1);
  assert.equal((text.match(/San Francisco time:/g)||[]).length,1);
  assert.equal((text.match(/New York time:/g)||[]).length,1);
@@ -53,7 +53,7 @@ test('copy text keeps 24-hour formatting and AM/PM changes clear',()=>{
 });
 test('copy text distinguishes the repeated hour when daylight saving ends',()=>{
  const text=availabilityText([{id:'fold',start:'2026-11-01T05:30:00Z',duration:60,title:'Available'}],[cities[2]]);
- assert.match(text,/Sunday, November 1, 2026: 1:30 AM EDT–1:30 AM EST/);
+ assert.match(text,/Sunday, November 1: 1:30 AM EDT–1:30 AM EST/);
 });
 test('ICS export round-trips the original instant',()=>{
  const slot={id:'slot',start:'2026-09-29T00:00:00Z',duration:60,title:'Interview availability'};
