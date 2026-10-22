@@ -36,7 +36,7 @@ export default function WorkHoursSettings({cities,h24,preferences,onSave}:Props)
     const time=`${String(Math.floor(bounded/60)%24).padStart(2,'0')}:${String(bounded%60).padStart(2,'0')}`;
     if(time!==schedule[field==='start'?'end':'start'])updateSchedule({[field]:time});
   }
-  const colorOptions=[selectedColor,...workColors.filter(color=>color.id!==selectedColor.id)];
+  const colorOptions=workColors.some(color=>color.id===selectedColor.id)?workColors:[...workColors,selectedColor];
   const colorOwner=(band:string)=>cities.find((item,index)=>item.id!==city.id&&getWorkColor((draft[item.id]||preferences[item.id]).color,index).band===band);
   const invalidCities=cities.filter(item=>!validWorkSchedule(draft[item.id]||preferences[item.id]));
   function updateSchedule(changes:Partial<typeof schedule>) {
@@ -107,7 +107,7 @@ export default function WorkHoursSettings({cities,h24,preferences,onSave}:Props)
             onPointerLeave={event=>{if(event.pointerType==='touch')return;paletteHovered.current=false;if(!palette.current?.querySelector(':focus-visible'))setColorsExpanded(false);}}
             onFocus={event=>{if(event.target.matches(':focus-visible'))setColorsExpanded(true);}}
             onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget)&&!paletteHovered.current)setColorsExpanded(false);}}>
-            {colorOptions.map((color,index)=><button key={color.id} type="button" aria-label={color.name} title={color.name} aria-pressed={selectedColor.id===color.id} aria-hidden={!colorsExpanded&&index!==0} tabIndex={!colorsExpanded&&index!==0?-1:0} style={{'--swatch-color':color.background,'--swatch-ink':color.ink,'--color-index':index} as React.CSSProperties} onClick={()=>{if(!colorsExpanded){setColorsExpanded(true);return;}selectColor(color);if(!paletteHovered.current)setColorsExpanded(false);}}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={14}/>}</span></button>)}
+            {colorOptions.map((color,index)=><button key={color.id} type="button" aria-label={color.name} title={color.name} aria-pressed={selectedColor.id===color.id} aria-hidden={!colorsExpanded&&selectedColor.id!==color.id} tabIndex={!colorsExpanded&&selectedColor.id!==color.id?-1:0} style={{'--swatch-color':color.background,'--swatch-band':color.band,'--swatch-ink':color.ink,'--color-index':index} as React.CSSProperties} onClick={()=>{if(!colorsExpanded){setColorsExpanded(true);return;}selectColor(color);if(!paletteHovered.current)setColorsExpanded(false);}}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={14}/>}</span></button>)}
           </div>
         </div>
         {!schedule.days.length?<p className="work-settings-note">No working days selected for {city.name}.</p>:schedule.end<schedule.start&&<p className="work-settings-note">Ends the following day.</p>}
