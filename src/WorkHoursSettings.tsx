@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { Check, Minus, Plus, Settings2, X } from 'lucide-react';
+import { Check, Settings2, X } from 'lucide-react';
 import type { City } from './time';
 import { getWorkColor, workColors, validWorkSchedule, type WorkHoursPreferences } from './workHours';
 
@@ -14,7 +14,8 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
   const id=useId();
   const popover=useRef<HTMLDivElement>(null);
   const trigger=useRef<HTMLButtonElement>(null);
-  const colorToggle=useRef<HTMLButtonElement>(null);
+  const palette=useRef<HTMLDivElement>(null);
+  const paletteHovered=useRef(false);
   const [colorsExpanded,setColorsExpanded]=useState(false);
   const [open,setOpen]=useState(false);
   const [cityId,setCityId]=useState(cities[0].id);
@@ -23,7 +24,7 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
   const city=cities.find(item=>item.id===cityId)||cities[0];
   const schedule=draft[city.id]||preferences[city.id];
   const selectedColor=getWorkColor(schedule.color,cities.findIndex(item=>item.id===city.id));
-  const colorOptions=workColors.some(color=>color.id===selectedColor.id)?workColors:[...workColors,selectedColor];
+  const colorOptions=[selectedColor,...workColors.filter(color=>color.id!==selectedColor.id)];
   const colorOwner=(band:string)=>cities.find((item,index)=>item.id!==city.id&&getWorkColor((draft[item.id]||preferences[item.id]).color,index).band===band);
   const invalidCities=cities.filter(item=>!validWorkSchedule(draft[item.id]||preferences[item.id]));
   function updateSchedule(changes:Partial<typeof schedule>) {
@@ -73,7 +74,16 @@ export default function WorkHoursSettings({cities,preferences,onSave}:Props) {
           <label>Start<input type="time" required step="900" value={schedule.start} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>updateSchedule({start:event.target.value})}/></label>
           <label>End<input type="time" required step="900" value={schedule.end} aria-invalid={!validWorkSchedule(schedule)} onChange={event=>updateSchedule({end:event.target.value})}/></label>
         </div>
-        <div className="work-settings-colors" role="group" aria-labelledby={`${id}-color`}><span id={`${id}-color`}>Color</span><div id={`${id}-color-options`}>{(colorsExpanded?colorOptions:[selectedColor]).map(color=><button key={color.id} type="button" aria-label={color.name} title={colorOwner(color.band)?`${color.name} · used by ${colorOwner(color.band)!.name}`:color.name} disabled={!!colorOwner(color.band)} aria-pressed={selectedColor.id===color.id} style={{'--swatch-color':color.band} as React.CSSProperties} onClick={()=>{updateSchedule({color:color.id});if(colorsExpanded){setColorsExpanded(false);colorToggle.current?.focus();}}}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={14}/>}</span></button>)}</div><button ref={colorToggle} type="button" className="work-color-expand" aria-label={colorsExpanded?'Hide colors':'Show colors'} title={colorsExpanded?'Hide colors':'Show colors'} aria-expanded={colorsExpanded} aria-controls={`${id}-color-options`} onClick={()=>setColorsExpanded(value=>!value)}>{colorsExpanded?<Minus size={16}/>:<Plus size={16}/>}</button></div>
+        <div className="work-settings-colors" role="group" aria-labelledby={`${id}-color`}>
+          <span id={`${id}-color`}>Color</span>
+          <div ref={palette} className="work-color-palette" data-expanded={colorsExpanded} style={{'--color-count':colorOptions.length} as React.CSSProperties}
+            onPointerEnter={event=>{if(event.pointerType==='mouse'||event.pointerType==='pen'){paletteHovered.current=true;setColorsExpanded(true);}}}
+            onPointerLeave={event=>{if(event.pointerType==='touch')return;paletteHovered.current=false;if(!palette.current?.querySelector(':focus-visible'))setColorsExpanded(false);}}
+            onFocus={event=>{if(event.target.matches(':focus-visible'))setColorsExpanded(true);}}
+            onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget)&&!paletteHovered.current)setColorsExpanded(false);}}>
+            {colorOptions.map((color,index)=><button key={color.id} type="button" aria-label={color.name} title={colorOwner(color.band)?`${color.name} · used by ${colorOwner(color.band)!.name}`:color.name} disabled={!!colorOwner(color.band)} aria-pressed={selectedColor.id===color.id} aria-hidden={!colorsExpanded&&index!==0} tabIndex={!colorsExpanded&&index!==0?-1:0} style={{'--swatch-color':color.band,'--color-index':index} as React.CSSProperties} onClick={()=>{if(!colorsExpanded){setColorsExpanded(true);return;}updateSchedule({color:color.id});if(!paletteHovered.current)setColorsExpanded(false);}}><span aria-hidden="true">{selectedColor.id===color.id&&<Check size={14}/>}</span></button>)}
+          </div>
+        </div>
         {!schedule.days.length?<p className="work-settings-note">No working days selected for {city.name}.</p>:schedule.end<schedule.start&&<p className="work-settings-note">Ends the following day.</p>}
         {invalidCities.length>0&&<p className="work-settings-error" role="alert">Choose different start and end times for {invalidCities.map(item=>item.name).join(', ')}.</p>}
         </div>

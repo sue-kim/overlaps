@@ -109,14 +109,16 @@
 .work-settings-actions .button:not(.button-primary){border-color:transparent;background:transparent;color:#506b74}
 .work-settings-actions .button:not(.button-primary):hover{background:#eef3f4}
 
-.work-settings-colors{display:flex;align-items:center;gap:12px;min-width:0;margin:14px 0 0}
+.work-settings-colors{display:flex;align-items:center;gap:8px;min-width:0;margin:14px 0 0}
 .work-settings-colors>span{font-size:11px;color:#506b74}
-.work-settings-colors>div{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
-.work-settings-colors button{display:flex;align-items:center;justify-content:center;width:28px;height:28px;padding:4px;border:0;border-radius:4px;color:#fff}
-.work-settings-colors button>span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--swatch-color)}
-.work-settings-colors button[aria-pressed=true],.work-settings-colors button:hover:not(:disabled){background:#eef3f4}
-@media(pointer:coarse){.work-settings-colors button{width:44px;height:44px}}
-
-.work-settings-colors button:disabled{opacity:1}
-
-.work-settings-colors .work-color-expand{color:#506b74;flex-shrink:0}
+.work-color-palette{--color-step:24px;--color-size:24px;position:relative;flex-shrink:0;width:var(--color-size);height:32px;transition:width .24s cubic-bezier(.16,1,.3,1)}
+.work-color-palette[data-expanded=true]{width:calc((var(--color-count) - 1)*var(--color-step) + var(--color-size))}
+.work-color-palette button{position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center;width:var(--color-size);height:32px;padding:3px;border:0;border-radius:4px;color:#fff;transition:transform .24s cubic-bezier(.16,1,.3,1),opacity .16s ease,visibility .24s}
+.work-color-palette button>span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--swatch-color)}
+.work-color-palette button[aria-pressed=true]{z-index:1;background:#eef3f4}
+.work-color-palette button:hover:not(:disabled){background:#eef3f4}
+.work-color-palette button:disabled{opacity:1}
+.work-color-palette[data-expanded=false] button:not([aria-pressed=true]){transform:translateX(0) scale(.7);opacity:0;visibility:hidden;pointer-events:none}
+.work-color-palette[data-expanded=true] button{transform:translateX(calc(var(--color-index)*var(--color-step)));opacity:1;visibility:visible;transition-delay:calc(var(--color-index)*10ms)}
+@media(pointer:coarse){.work-color-palette{--color-size:30px;--color-step:30px;height:44px}.work-color-palette button{height:44px}}
+@media(prefers-reduced-motion:reduce){.work-color-palette,.work-color-palette button{transition:none}}
